@@ -1,0 +1,651 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Nullify AI — Documentation</title>
+  <style>
+    :root {
+      --bg: #0A0E1A;
+      --surface: #111827;
+      --surface-2: #1a2235;
+      --border: #1e2d42;
+      --accent: #6C63FF;
+      --accent-dim: rgba(108,99,255,0.12);
+      --teal: #14B8A6;
+      --teal-dim: rgba(20,184,166,0.12);
+      --amber: #F59E0B;
+      --amber-dim: rgba(245,158,11,0.12);
+      --red: #EF4444;
+      --green: #22C55E;
+      --text: #E2E8F0;
+      --text-muted: #94A3B8;
+      --text-faint: #475569;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+      line-height: 1.6;
+    }
+
+    /* ── Topbar ── */
+    .topbar {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 0 32px;
+      height: 60px;
+      background: var(--surface);
+      border-bottom: 1px solid var(--border);
+      position: sticky;
+      top: 0;
+      z-index: 100;
+    }
+
+    .logo {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      font-weight: 700;
+      font-size: 18px;
+      letter-spacing: -0.3px;
+      color: var(--text);
+      text-decoration: none;
+    }
+
+    .logo-icon {
+      width: 32px;
+      height: 32px;
+      background: linear-gradient(135deg, var(--accent), var(--teal));
+      border-radius: 8px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 16px;
+    }
+
+    .topbar-sep { color: var(--text-faint); margin: 0 4px; }
+
+    .topbar-section {
+      font-size: 14px;
+      color: var(--text-muted);
+    }
+
+    .topbar-actions {
+      margin-left: auto;
+      display: flex;
+      gap: 8px;
+    }
+
+    .btn {
+      padding: 7px 16px;
+      border-radius: 7px;
+      font-size: 13px;
+      font-weight: 500;
+      cursor: pointer;
+      text-decoration: none;
+      border: none;
+      transition: all 0.15s;
+    }
+
+    .btn-ghost {
+      background: transparent;
+      color: var(--text-muted);
+      border: 1px solid var(--border);
+    }
+    .btn-ghost:hover { background: var(--surface-2); color: var(--text); }
+
+    .btn-primary {
+      background: var(--accent);
+      color: #fff;
+    }
+    .btn-primary:hover { background: #5b52f5; }
+
+    /* ── Hero ── */
+    .hero {
+      padding: 64px 32px 48px;
+      max-width: 960px;
+      margin: 0 auto;
+    }
+
+    .badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      background: var(--accent-dim);
+      border: 1px solid rgba(108,99,255,0.3);
+      color: #a5a0ff;
+      font-size: 12px;
+      font-weight: 600;
+      letter-spacing: 0.04em;
+      text-transform: uppercase;
+      padding: 4px 12px;
+      border-radius: 20px;
+      margin-bottom: 20px;
+    }
+
+    .hero h1 {
+      font-size: 42px;
+      font-weight: 800;
+      letter-spacing: -1px;
+      line-height: 1.15;
+      margin-bottom: 16px;
+    }
+
+    .hero h1 span {
+      background: linear-gradient(90deg, var(--accent), var(--teal));
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+
+    .hero p {
+      font-size: 17px;
+      color: var(--text-muted);
+      max-width: 600px;
+      margin-bottom: 32px;
+    }
+
+    .hero-stats {
+      display: flex;
+      gap: 32px;
+      flex-wrap: wrap;
+    }
+
+    .stat {
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+    }
+
+    .stat-num {
+      font-size: 24px;
+      font-weight: 700;
+      color: var(--text);
+    }
+
+    .stat-label {
+      font-size: 12px;
+      color: var(--text-faint);
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+
+    /* ── Grid ── */
+    .grid-section {
+      max-width: 960px;
+      margin: 0 auto;
+      padding: 0 32px 80px;
+    }
+
+    .section-title {
+      font-size: 13px;
+      font-weight: 600;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      color: var(--text-faint);
+      margin-bottom: 16px;
+      padding-bottom: 8px;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .doc-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+      gap: 16px;
+      margin-bottom: 48px;
+    }
+
+    .doc-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 24px;
+      text-decoration: none;
+      color: var(--text);
+      transition: all 0.18s;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .doc-card::before {
+      content: '';
+      position: absolute;
+      inset: 0;
+      opacity: 0;
+      transition: opacity 0.18s;
+    }
+
+    .doc-card:hover {
+      border-color: rgba(108,99,255,0.4);
+      transform: translateY(-2px);
+      box-shadow: 0 8px 24px rgba(0,0,0,0.3);
+    }
+
+    .doc-card:hover::before { opacity: 1; }
+
+    .card-icon {
+      width: 40px;
+      height: 40px;
+      border-radius: 10px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 20px;
+      flex-shrink: 0;
+    }
+
+    .card-icon.purple { background: var(--accent-dim); }
+    .card-icon.teal   { background: var(--teal-dim); }
+    .card-icon.amber  { background: var(--amber-dim); }
+    .card-icon.red    { background: rgba(239,68,68,0.1); }
+    .card-icon.green  { background: rgba(34,197,94,0.1); }
+
+    .card-body { flex: 1; }
+
+    .card-title {
+      font-size: 15px;
+      font-weight: 600;
+      margin-bottom: 6px;
+    }
+
+    .card-desc {
+      font-size: 13px;
+      color: var(--text-muted);
+      line-height: 1.5;
+    }
+
+    .card-meta {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-top: 4px;
+    }
+
+    .tag {
+      font-size: 11px;
+      font-weight: 600;
+      padding: 2px 8px;
+      border-radius: 4px;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+    }
+
+    .tag-md { background: rgba(94,234,212,0.1); color: #5eead4; }
+    .tag-html { background: rgba(251,146,60,0.1); color: #fb923c; }
+
+    .card-arrow {
+      color: var(--text-faint);
+      font-size: 16px;
+      transition: transform 0.18s;
+    }
+    .doc-card:hover .card-arrow { transform: translateX(3px); color: var(--accent); }
+
+    /* ── Quick Reference ── */
+    .quick-ref {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 24px;
+      margin-bottom: 48px;
+    }
+
+    .quick-ref h3 {
+      font-size: 14px;
+      font-weight: 600;
+      color: var(--text-muted);
+      margin-bottom: 16px;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+    }
+
+    .ref-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+      gap: 8px;
+    }
+
+    .ref-item {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 8px 12px;
+      background: var(--surface-2);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      font-size: 13px;
+      color: var(--text-muted);
+      text-decoration: none;
+      transition: all 0.15s;
+    }
+
+    .ref-item:hover { color: var(--text); border-color: var(--accent); }
+
+    .ref-dot {
+      width: 7px;
+      height: 7px;
+      border-radius: 50%;
+      flex-shrink: 0;
+    }
+
+    /* ── Demo Links ── */
+    .demo-row {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+      gap: 12px;
+      margin-bottom: 48px;
+    }
+
+    .demo-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 16px 20px;
+      text-decoration: none;
+      color: var(--text);
+      transition: all 0.15s;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .demo-card:hover {
+      border-color: var(--teal);
+      box-shadow: 0 0 0 1px rgba(20,184,166,0.2);
+    }
+
+    .demo-num {
+      width: 28px;
+      height: 28px;
+      background: var(--teal-dim);
+      color: var(--teal);
+      border-radius: 7px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 13px;
+      font-weight: 700;
+      flex-shrink: 0;
+    }
+
+    .demo-label {
+      font-size: 13px;
+      font-weight: 500;
+    }
+
+    .demo-sublabel {
+      font-size: 11px;
+      color: var(--text-faint);
+    }
+
+    /* ── Footer ── */
+    .footer {
+      border-top: 1px solid var(--border);
+      padding: 24px 32px;
+      text-align: center;
+      color: var(--text-faint);
+      font-size: 13px;
+    }
+
+    .footer a { color: var(--text-muted); text-decoration: none; }
+    .footer a:hover { color: var(--text); }
+
+    /* ── Scrollbar ── */
+    ::-webkit-scrollbar { width: 6px; }
+    ::-webkit-scrollbar-track { background: var(--bg); }
+    ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+  </style>
+</head>
+<body>
+
+<!-- Topbar -->
+<nav class="topbar">
+  <a href="../index.html" class="logo">
+    <div class="logo-icon">⚡</div>
+    Nullify AI
+  </a>
+  <span class="topbar-sep">/</span>
+  <span class="topbar-section">Documentation</span>
+  <div class="topbar-actions">
+    <a href="../index.html" class="btn btn-ghost">← Back to Hub</a>
+    <a href="../pages/dashboard.html" class="btn btn-primary">Open Dashboard →</a>
+  </div>
+</nav>
+
+<!-- Hero -->
+<div class="hero">
+  <div class="badge">📄 Documentation</div>
+  <h1>Everything you need to<br/><span>understand Nullify AI</span></h1>
+  <p>Architecture guides, API references, product requirements, and security documentation — all in one place.</p>
+  <div class="hero-stats">
+    <div class="stat">
+      <span class="stat-num">4</span>
+      <span class="stat-label">Documents</span>
+    </div>
+    <div class="stat">
+      <span class="stat-num">6</span>
+      <span class="stat-label">Components</span>
+    </div>
+    <div class="stat">
+      <span class="stat-num">18+</span>
+      <span class="stat-label">API Endpoints</span>
+    </div>
+    <div class="stat">
+      <span class="stat-num">v1.0</span>
+      <span class="stat-label">MVP</span>
+    </div>
+  </div>
+</div>
+
+<!-- Docs Grid -->
+<div class="grid-section">
+
+  <div class="section-title">Core Documentation</div>
+
+  <div class="doc-grid">
+
+    <!-- System Architecture -->
+    <a href="system-architecture.md" class="doc-card">
+      <div class="card-icon purple">🏗️</div>
+      <div class="card-body">
+        <div class="card-title">System Architecture</div>
+        <div class="card-desc">High-level design, component breakdown, data flow diagrams, infrastructure topology, and performance benchmarks.</div>
+      </div>
+      <div class="card-meta">
+        <span class="tag tag-md">Markdown</span>
+        <span class="card-arrow">→</span>
+      </div>
+    </a>
+
+    <!-- Technical Spec -->
+    <a href="technical-spec.md" class="doc-card">
+      <div class="card-icon teal">⚙️</div>
+      <div class="card-body">
+        <div class="card-title">Technical Specification</div>
+        <div class="card-desc">REST API endpoints, request/response schemas, TypeScript data models, SDK integration examples, and rate limits.</div>
+      </div>
+      <div class="card-meta">
+        <span class="tag tag-md">Markdown</span>
+        <span class="card-arrow">→</span>
+      </div>
+    </a>
+
+    <!-- Product Requirements -->
+    <a href="product-requirements.md" class="doc-card">
+      <div class="card-icon amber">📋</div>
+      <div class="card-body">
+        <div class="card-title">Product Requirements</div>
+        <div class="card-desc">Problem statement, user personas, use cases (loan underwriting, prior auth, fraud detection), MVP scope, and success metrics.</div>
+      </div>
+      <div class="card-meta">
+        <span class="tag tag-md">Markdown</span>
+        <span class="card-arrow">→</span>
+      </div>
+    </a>
+
+    <!-- Security & Compliance -->
+    <a href="security-compliance.md" class="doc-card">
+      <div class="card-icon red">🔒</div>
+      <div class="card-body">
+        <div class="card-title">Security & Compliance</div>
+        <div class="card-desc">EU AI Act alignment, HIPAA, SOC 2 Type II posture, encryption specs, threat model, incident response, and access control.</div>
+      </div>
+      <div class="card-meta">
+        <span class="tag tag-md">Markdown</span>
+        <span class="card-arrow">→</span>
+      </div>
+    </a>
+
+  </div>
+
+  <!-- Quick Reference -->
+  <div class="section-title">Quick Reference</div>
+  <div class="quick-ref">
+    <h3>Key Concepts</h3>
+    <div class="ref-grid">
+      <a href="system-architecture.md#api-intercept-gateway" class="ref-item">
+        <div class="ref-dot" style="background:#6C63FF"></div>
+        API Intercept Gateway
+      </a>
+      <a href="system-architecture.md#rule-evaluation-engine" class="ref-item">
+        <div class="ref-dot" style="background:#14B8A6"></div>
+        Rule Evaluation Engine
+      </a>
+      <a href="system-architecture.md#behavioral-baseline-ml" class="ref-item">
+        <div class="ref-dot" style="background:#F59E0B"></div>
+        Behavioral Baseline ML
+      </a>
+      <a href="system-architecture.md#verdict-engine" class="ref-item">
+        <div class="ref-dot" style="background:#22C55E"></div>
+        Verdict Engine
+      </a>
+      <a href="system-architecture.md#immutable-audit-logger" class="ref-item">
+        <div class="ref-dot" style="background:#EF4444"></div>
+        Immutable Audit Logger
+      </a>
+      <a href="system-architecture.md#alert-escalation-engine" class="ref-item">
+        <div class="ref-dot" style="background:#EC4899"></div>
+        Alert & Escalation Engine
+      </a>
+      <a href="technical-spec.md#post-evaluate" class="ref-item">
+        <div class="ref-dot" style="background:#6C63FF"></div>
+        POST /v1/evaluate
+      </a>
+      <a href="technical-spec.md#get-agents" class="ref-item">
+        <div class="ref-dot" style="background:#14B8A6"></div>
+        GET /v1/agents
+      </a>
+      <a href="technical-spec.md#rules-endpoints" class="ref-item">
+        <div class="ref-dot" style="background:#F59E0B"></div>
+        Rules Endpoints
+      </a>
+      <a href="technical-spec.md#webhook-specification" class="ref-item">
+        <div class="ref-dot" style="background:#22C55E"></div>
+        Webhook Events
+      </a>
+      <a href="security-compliance.md#eu-ai-act" class="ref-item">
+        <div class="ref-dot" style="background:#EF4444"></div>
+        EU AI Act Compliance
+      </a>
+      <a href="security-compliance.md#threat-model" class="ref-item">
+        <div class="ref-dot" style="background:#EC4899"></div>
+        Threat Model
+      </a>
+    </div>
+  </div>
+
+  <!-- Demo Pages -->
+  <div class="section-title">Interactive Demos</div>
+  <div class="demo-row">
+    <a href="../pages/landing.html" class="demo-card">
+      <div class="demo-num">1</div>
+      <div>
+        <div class="demo-label">Landing Page</div>
+        <div class="demo-sublabel">Marketing & positioning</div>
+      </div>
+    </a>
+    <a href="../pages/dashboard.html" class="demo-card">
+      <div class="demo-num">2</div>
+      <div>
+        <div class="demo-label">Agent Dashboard</div>
+        <div class="demo-sublabel">Live monitoring + walkthrough</div>
+      </div>
+    </a>
+    <a href="../pages/architecture.html" class="demo-card">
+      <div class="demo-num">3</div>
+      <div>
+        <div class="demo-label">Architecture Diagram</div>
+        <div class="demo-sublabel">Animated system view</div>
+      </div>
+    </a>
+    <a href="../pages/rules.html" class="demo-card">
+      <div class="demo-num">4</div>
+      <div>
+        <div class="demo-label">Rules & Alerts</div>
+        <div class="demo-sublabel">18 rules, 5 channels</div>
+      </div>
+    </a>
+  </div>
+
+  <!-- Document Summary Table -->
+  <div class="section-title">Document Summary</div>
+  <div style="background: var(--surface); border: 1px solid var(--border); border-radius: 12px; overflow: hidden; margin-bottom: 48px;">
+    <table style="width: 100%; border-collapse: collapse; font-size: 13px;">
+      <thead>
+        <tr style="background: var(--surface-2); border-bottom: 1px solid var(--border);">
+          <th style="padding: 12px 20px; text-align: left; color: var(--text-faint); font-weight: 600; text-transform: uppercase; letter-spacing: 0.06em; font-size: 11px;">Document</th>
+          <th style="padding: 12px 20px; text-align: left; color: var(--text-faint); font-weight: 600; text-transform: uppercase; letter-spacing: 0.06em; font-size: 11px;">Audience</th>
+          <th style="padding: 12px 20px; text-align: left; color: var(--text-faint); font-weight: 600; text-transform: uppercase; letter-spacing: 0.06em; font-size: 11px;">Key Contents</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr style="border-bottom: 1px solid var(--border);">
+          <td style="padding: 14px 20px; font-weight: 500;">
+            <a href="system-architecture.md" style="color: #a5a0ff; text-decoration: none;">System Architecture</a>
+          </td>
+          <td style="padding: 14px 20px; color: var(--text-muted);">Engineers, Technical Interviewers</td>
+          <td style="padding: 14px 20px; color: var(--text-muted);">Component diagrams, data flow, infrastructure, benchmarks</td>
+        </tr>
+        <tr style="border-bottom: 1px solid var(--border);">
+          <td style="padding: 14px 20px; font-weight: 500;">
+            <a href="technical-spec.md" style="color: #5eead4; text-decoration: none;">Technical Specification</a>
+          </td>
+          <td style="padding: 14px 20px; color: var(--text-muted);">API Consumers, SDK Integrators</td>
+          <td style="padding: 14px 20px; color: var(--text-muted);">REST API, TypeScript models, SDK integration code</td>
+        </tr>
+        <tr style="border-bottom: 1px solid var(--border);">
+          <td style="padding: 14px 20px; font-weight: 500;">
+            <a href="product-requirements.md" style="color: #fbbf24; text-decoration: none;">Product Requirements</a>
+          </td>
+          <td style="padding: 14px 20px; color: var(--text-muted);">PMs, Investors, Business Stakeholders</td>
+          <td style="padding: 14px 20px; color: var(--text-muted);">Personas, use cases, MVP scope, success metrics</td>
+        </tr>
+        <tr>
+          <td style="padding: 14px 20px; font-weight: 500;">
+            <a href="security-compliance.md" style="color: #f87171; text-decoration: none;">Security & Compliance</a>
+          </td>
+          <td style="padding: 14px 20px; color: var(--text-muted);">CCOs, Legal, Enterprise Procurement</td>
+          <td style="padding: 14px 20px; color: var(--text-muted);">EU AI Act, HIPAA, SOC 2, threat model, encryption</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+</div>
+
+<!-- Footer -->
+<div class="footer">
+  <p>Nullify AI — Prototype Documentation &nbsp;·&nbsp; <a href="../index.html">Return to Hub</a> &nbsp;·&nbsp; <a href="../pages/dashboard.html">Open Dashboard</a></p>
+  <p style="margin-top: 6px; font-size: 11px;">This is a prototype built for demonstration purposes. All agents, decisions, and data are simulated.</p>
+</div>
+
+</body>
+</html>
