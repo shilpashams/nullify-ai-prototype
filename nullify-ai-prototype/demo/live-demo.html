@@ -1,0 +1,1001 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Nullify AI — Live PoC Demo</title>
+  <style>
+    :root {
+      --bg: #0A0E1A;
+      --surface: #111827;
+      --surface-2: #1a2235;
+      --surface-3: #1e293b;
+      --border: #1e2d42;
+      --accent: #6C63FF;
+      --teal: #14B8A6;
+      --amber: #F59E0B;
+      --red: #EF4444;
+      --green: #22C55E;
+      --text: #E2E8F0;
+      --text-muted: #94A3B8;
+      --text-faint: #475569;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    html, body { height: 100%; overflow: hidden; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      display: flex;
+      flex-direction: column;
+    }
+
+    /* ── Topbar ── */
+    .topbar {
+      display: flex; align-items: center; gap: 12px;
+      padding: 0 20px; height: 52px;
+      background: var(--surface); border-bottom: 1px solid var(--border);
+      flex-shrink: 0; z-index: 10;
+    }
+    .logo { display: flex; align-items: center; gap: 8px; font-weight: 700; font-size: 15px; }
+    .logo-icon {
+      width: 26px; height: 26px; background: linear-gradient(135deg, var(--accent), var(--teal));
+      border-radius: 6px; display: flex; align-items: center; justify-content: center; font-size: 13px;
+    }
+    .topbar-tag {
+      font-size: 11px; font-weight: 600; padding: 2px 8px; border-radius: 4px;
+      background: rgba(108,99,255,0.15); color: #a5a0ff; letter-spacing: 0.04em; text-transform: uppercase;
+    }
+    .live-dot {
+      width: 7px; height: 7px; border-radius: 50%; background: var(--green);
+      animation: pulse-green 1.5s infinite; margin-left: 4px;
+    }
+    @keyframes pulse-green { 0%,100%{ opacity:1; box-shadow:0 0 0 0 rgba(34,197,94,0.5); } 50%{ opacity:0.8; box-shadow:0 0 0 4px rgba(34,197,94,0); } }
+
+    .topbar-right { margin-left: auto; display: flex; gap: 8px; }
+    .btn {
+      padding: 5px 12px; border-radius: 6px; font-size: 12px; font-weight: 500;
+      cursor: pointer; text-decoration: none; border: none; transition: all 0.15s;
+    }
+    .btn-ghost { background: transparent; color: var(--text-muted); border: 1px solid var(--border); }
+    .btn-ghost:hover { background: var(--surface-2); color: var(--text); }
+    .btn-primary { background: var(--accent); color: #fff; }
+    .btn-primary:hover { background: #5b52f5; }
+
+    /* ── Steps ── */
+    .steps-bar {
+      display: flex; align-items: center; gap: 0;
+      padding: 0 20px; height: 40px;
+      background: var(--surface-2); border-bottom: 1px solid var(--border);
+      flex-shrink: 0;
+    }
+    .step {
+      display: flex; align-items: center; gap: 7px;
+      font-size: 12px; font-weight: 500; color: var(--text-muted);
+      padding: 0 16px 0 0; margin-right: 16px;
+      border-right: 1px solid var(--border);
+    }
+    .step:last-child { border-right: none; }
+    .step-num {
+      width: 18px; height: 18px; border-radius: 50%; display: flex; align-items: center;
+      justify-content: center; font-size: 10px; font-weight: 700; flex-shrink: 0;
+    }
+    .step.done .step-num { background: var(--green); color: #fff; }
+    .step.done { color: var(--text); }
+    .step.active .step-num { background: var(--accent); color: #fff; }
+    .step.active { color: var(--text); }
+    .step.pending .step-num { background: var(--surface-3); color: var(--text-faint); border: 1px solid var(--border); }
+
+    /* ── Main layout ── */
+    .main {
+      flex: 1; display: grid;
+      grid-template-columns: 240px 1fr 280px;
+      gap: 0; overflow: hidden;
+    }
+
+    /* ── Panels ── */
+    .panel { display: flex; flex-direction: column; overflow: hidden; }
+    .panel-left { border-right: 1px solid var(--border); }
+    .panel-right { border-left: 1px solid var(--border); }
+    .panel-header {
+      padding: 10px 14px 8px; border-bottom: 1px solid var(--border);
+      font-size: 11px; font-weight: 600; text-transform: uppercase;
+      letter-spacing: 0.07em; color: var(--text-faint); display: flex;
+      align-items: center; gap: 6px; flex-shrink: 0;
+    }
+    .panel-body { flex: 1; overflow-y: auto; padding: 10px 0; }
+
+    /* ── Agent rows ── */
+    .agent-row {
+      display: flex; align-items: center; gap: 10px;
+      padding: 8px 14px; cursor: default; transition: background 0.15s;
+    }
+    .agent-row:hover { background: var(--surface-2); }
+    .agent-icon {
+      width: 28px; height: 28px; border-radius: 7px; display: flex;
+      align-items: center; justify-content: center; font-size: 13px; flex-shrink: 0;
+    }
+    .agent-icon.loan { background: rgba(108,99,255,0.15); }
+    .agent-icon.hc   { background: rgba(20,184,166,0.15); }
+    .agent-icon.fraud{ background: rgba(245,158,11,0.15); }
+    .agent-info { flex: 1; min-width: 0; }
+    .agent-name { font-size: 12px; font-weight: 600; }
+    .agent-vert { font-size: 10px; color: var(--text-faint); }
+    .status-badge {
+      font-size: 10px; font-weight: 700; padding: 2px 6px; border-radius: 4px;
+      text-transform: uppercase; letter-spacing: 0.04em;
+    }
+    .status-badge.healthy  { background: rgba(34,197,94,0.12); color: #4ade80; }
+    .status-badge.warning  { background: rgba(245,158,11,0.12); color: #fbbf24; }
+    .status-badge.critical { background: rgba(239,68,68,0.12);  color: #f87171; animation: pulse-red 1.5s infinite; }
+    @keyframes pulse-red { 0%,100%{ opacity:1; } 50%{ opacity:0.6; } }
+
+    .section-divider {
+      height: 1px; background: var(--border); margin: 6px 0;
+    }
+
+    /* ── Policy rows ── */
+    .policy-row {
+      padding: 7px 14px; display: flex; align-items: flex-start; gap: 8px;
+    }
+    .policy-active-dot {
+      width: 6px; height: 6px; border-radius: 50%; background: var(--teal);
+      margin-top: 4px; flex-shrink: 0;
+    }
+    .policy-code { font-size: 11px; font-weight: 700; color: #5eead4; margin-bottom: 2px; }
+    .policy-desc { font-size: 10px; color: var(--text-faint); line-height: 1.4; }
+
+    /* ── Decision feed ── */
+    #feed {
+      flex: 1; overflow-y: auto; padding: 10px 14px;
+      display: flex; flex-direction: column; gap: 6px;
+    }
+    .feed-header-row {
+      display: flex; align-items: center; gap: 8px;
+      padding: 10px 14px 8px; border-bottom: 1px solid var(--border);
+      flex-shrink: 0;
+    }
+    .feed-title { font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.07em; color: var(--text-faint); }
+    .feed-speed { margin-left: auto; display: flex; align-items: center; gap: 6px; font-size: 11px; color: var(--text-faint); }
+    .speed-btn {
+      padding: 2px 7px; border-radius: 4px; font-size: 10px; font-weight: 600;
+      cursor: pointer; border: 1px solid var(--border); background: transparent;
+      color: var(--text-faint); transition: all 0.15s;
+    }
+    .speed-btn.active { background: var(--accent); border-color: var(--accent); color: #fff; }
+    .speed-btn:hover:not(.active) { background: var(--surface-2); color: var(--text); }
+
+    .dcard {
+      background: var(--surface); border: 1px solid var(--border);
+      border-radius: 8px; padding: 9px 11px; font-size: 11px;
+      animation: slideDown 0.25s ease-out;
+      transition: border-color 0.3s, background 0.3s;
+      position: relative; overflow: hidden;
+    }
+    @keyframes slideDown { from { opacity: 0; transform: translateY(-8px); } to { opacity: 1; transform: translateY(0); } }
+    .dcard::before {
+      content: ''; position: absolute; left: 0; top: 0; bottom: 0; width: 3px;
+      transition: background 0.3s;
+    }
+
+    .dcard.evaluating::before { background: var(--amber); }
+    .dcard.approved::before   { background: var(--green); }
+    .dcard.blocked::before    { background: var(--red); }
+    .dcard.escalated::before  { background: var(--amber); }
+
+    .dcard.blocked  { background: rgba(239,68,68,0.04); }
+    .dcard.escalated{ background: rgba(245,158,11,0.04); }
+
+    @keyframes flashBlock { 0%{ background: rgba(239,68,68,0.18); } 100%{ background: rgba(239,68,68,0.04); } }
+    .dcard.flash-block { animation: slideDown 0.25s ease-out, flashBlock 0.5s ease-out 0.25s; }
+
+    .dcard-top {
+      display: flex; align-items: center; gap: 6px; margin-bottom: 4px;
+    }
+    .agent-chip {
+      font-size: 10px; font-weight: 700; padding: 1px 6px; border-radius: 4px;
+      text-transform: uppercase; letter-spacing: 0.04em;
+    }
+    .agent-chip.loan  { background: rgba(108,99,255,0.15); color: #a5a0ff; }
+    .agent-chip.hc    { background: rgba(20,184,166,0.15);  color: #5eead4; }
+    .agent-chip.fraud { background: rgba(245,158,11,0.15);  color: #fde68a; }
+    .dtype { font-size: 10px; color: var(--text-faint); }
+    .dlatency { margin-left: auto; font-size: 10px; color: var(--text-faint); font-family: monospace; }
+
+    .dpayload { color: var(--text-muted); margin-bottom: 5px; line-height: 1.4; }
+
+    .dcard-verdict { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+    .vbadge {
+      font-size: 10px; font-weight: 700; padding: 2px 7px; border-radius: 4px;
+      letter-spacing: 0.05em;
+    }
+    .vbadge.evaluating { background: rgba(245,158,11,0.15); color: var(--amber); }
+    .vbadge.approved   { background: rgba(34,197,94,0.12);   color: #4ade80; }
+    .vbadge.blocked    { background: rgba(239,68,68,0.15);   color: #f87171; }
+    .vbadge.escalated  { background: rgba(245,158,11,0.15);  color: #fbbf24; }
+    .vrule { font-size: 10px; color: var(--text-faint); font-family: monospace; }
+    .vexposure { font-size: 10px; color: #f87171; font-weight: 600; }
+    .vdrift { font-size: 10px; color: var(--amber); }
+    .vagent-override {
+      font-size: 10px; padding: 1px 6px; border-radius: 3px;
+      background: rgba(239,68,68,0.12); color: #fca5a5;
+    }
+    .evaluating-pulse {
+      display: flex; align-items: center; gap: 5px; color: var(--amber); font-size: 10px;
+    }
+    .ep-dot { width: 5px; height: 5px; border-radius: 50%; background: var(--amber); animation: blink 0.8s infinite; }
+    @keyframes blink { 0%,100%{opacity:1} 50%{opacity:0.2} }
+
+    /* ── Right panel stats ── */
+    .stats-grid {
+      display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px; padding: 10px 12px;
+    }
+    .stat-box {
+      background: var(--surface-2); border: 1px solid var(--border); border-radius: 8px;
+      padding: 8px; text-align: center;
+    }
+    .stat-num { font-size: 22px; font-weight: 800; line-height: 1; margin-bottom: 2px; }
+    .stat-lbl { font-size: 9px; text-transform: uppercase; letter-spacing: 0.05em; color: var(--text-faint); }
+    .stat-num.approved { color: var(--green); }
+    .stat-num.blocked  { color: var(--red); }
+    .stat-num.escalated{ color: var(--amber); }
+
+    .right-divider { height: 1px; background: var(--border); margin: 0 12px 8px; }
+
+    /* ── Last blocked detail ── */
+    #last-blocked {
+      margin: 0 12px; background: rgba(239,68,68,0.06); border: 1px solid rgba(239,68,68,0.2);
+      border-radius: 8px; padding: 10px;
+    }
+    .lb-header { font-size: 10px; font-weight: 700; color: #f87171; text-transform: uppercase; letter-spacing: 0.06em; margin-bottom: 8px; display: flex; align-items: center; gap: 5px; }
+    .lb-row { display: flex; justify-content: space-between; margin-bottom: 4px; font-size: 11px; }
+    .lb-key { color: var(--text-faint); }
+    .lb-val { color: var(--text); font-weight: 500; text-align: right; max-width: 140px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .lb-empty { color: var(--text-faint); font-size: 11px; text-align: center; padding: 12px 0; }
+
+    /* ── Drift alert ── */
+    #drift-alert {
+      margin: 8px 12px 0; background: rgba(245,158,11,0.08); border: 1px solid rgba(245,158,11,0.25);
+      border-radius: 8px; padding: 10px; display: none;
+      animation: slideDown 0.3s ease-out;
+    }
+    #drift-alert.visible { display: block; }
+    .da-header { font-size: 10px; font-weight: 700; color: var(--amber); text-transform: uppercase; letter-spacing: 0.06em; margin-bottom: 6px; }
+    .da-body { font-size: 11px; color: var(--text-muted); line-height: 1.5; }
+    .da-stat { font-weight: 700; color: #fbbf24; }
+
+    /* ── Scenario bar ── */
+    .scenario-bar {
+      flex-shrink: 0; border-top: 1px solid var(--border);
+      background: var(--surface); padding: 10px 20px;
+    }
+    .scenario-label { font-size: 10px; text-transform: uppercase; letter-spacing: 0.07em; color: var(--text-faint); margin-bottom: 8px; font-weight: 600; }
+    .scenario-btns { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
+    .sBtn {
+      padding: 7px 14px; border-radius: 8px; font-size: 12px; font-weight: 600;
+      cursor: pointer; border: 1px solid var(--border); background: var(--surface-2);
+      color: var(--text-muted); transition: all 0.18s; display: flex; align-items: center; gap: 6px;
+    }
+    .sBtn:hover { color: var(--text); border-color: rgba(108,99,255,0.4); background: rgba(108,99,255,0.08); }
+    .sBtn.active { color: var(--text); font-weight: 700; }
+    .sBtn.active.s-baseline { background: rgba(34,197,94,0.1); border-color: rgba(34,197,94,0.4); color: #4ade80; }
+    .sBtn.active.s-hc       { background: rgba(239,68,68,0.1); border-color: rgba(239,68,68,0.4); color: #f87171; }
+    .sBtn.active.s-fraud    { background: rgba(245,158,11,0.1); border-color: rgba(245,158,11,0.4); color: #fbbf24; }
+    .sBtn.active.s-crisis   { background: rgba(239,68,68,0.12); border-color: rgba(239,68,68,0.5); color: #fca5a5; }
+    .sBtn-reset { margin-left: auto; }
+
+    .scenario-desc {
+      margin-top: 7px; font-size: 11px; color: var(--text-muted);
+      min-height: 16px;
+    }
+
+    /* scrollbar */
+    ::-webkit-scrollbar { width: 5px; }
+    ::-webkit-scrollbar-track { background: transparent; }
+    ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+
+    /* ── Create Policy ── */
+    .create-policy-btn {
+      margin: 8px 14px 4px; width: calc(100% - 28px);
+      padding: 7px 10px; border-radius: 7px; font-size: 11px; font-weight: 600;
+      cursor: pointer; border: 1px dashed rgba(108,99,255,0.4);
+      background: rgba(108,99,255,0.06); color: var(--accent);
+      transition: all 0.18s; text-align: center; display: block;
+    }
+    .create-policy-btn:hover { background: rgba(108,99,255,0.12); border-color: var(--accent); }
+
+    .policy-form {
+      margin: 4px 10px 8px; background: var(--surface-2);
+      border: 1px solid rgba(108,99,255,0.35); border-radius: 8px;
+      padding: 10px; display: none;
+      animation: slideDown 0.2s ease-out;
+    }
+    .policy-form.visible { display: block; }
+    .pf-title { font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.07em; color: var(--accent); margin-bottom: 8px; }
+    .pf-row { margin-bottom: 7px; }
+    .pf-label { font-size: 10px; color: var(--text-faint); margin-bottom: 3px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em; }
+    .pf-select, .pf-input {
+      width: 100%; padding: 5px 7px; border-radius: 5px; font-size: 11px;
+      background: var(--surface-3); border: 1px solid var(--border); color: var(--text);
+      outline: none; cursor: pointer;
+    }
+    .pf-select:focus, .pf-input:focus { border-color: var(--accent); }
+    .pf-action-row { display: flex; gap: 6px; }
+    .pf-action-opt {
+      flex: 1; padding: 5px 4px; border-radius: 5px; font-size: 10px; font-weight: 700;
+      cursor: pointer; border: 1px solid var(--border); background: var(--surface-3);
+      color: var(--text-faint); text-align: center; text-transform: uppercase; letter-spacing: 0.04em;
+      transition: all 0.15s; user-select: none;
+    }
+    .pf-action-opt.sel-block { background: rgba(239,68,68,0.15); border-color: rgba(239,68,68,0.5); color: #f87171; }
+    .pf-action-opt.sel-warn  { background: rgba(245,158,11,0.15); border-color: rgba(245,158,11,0.5); color: #fbbf24; }
+    .pf-btns { display: flex; gap: 6px; margin-top: 8px; }
+    .pf-activate {
+      flex: 1; padding: 7px; border-radius: 6px; font-size: 11px; font-weight: 700;
+      cursor: pointer; border: none; background: var(--accent); color: #fff;
+      transition: all 0.15s;
+    }
+    .pf-activate:hover { background: #5b52f5; }
+    .pf-cancel {
+      padding: 7px 10px; border-radius: 6px; font-size: 11px;
+      cursor: pointer; border: 1px solid var(--border); background: transparent; color: var(--text-faint);
+    }
+    .pf-cancel:hover { color: var(--text); background: var(--surface-3); }
+    .policy-new-badge {
+      display: inline-block; font-size: 8px; font-weight: 800; padding: 1px 4px;
+      border-radius: 3px; background: var(--accent); color: #fff; letter-spacing: 0.05em;
+      vertical-align: middle; margin-left: 3px; animation: pulseBadge 2s infinite;
+    }
+    @keyframes pulseBadge { 0%,100%{opacity:1} 50%{opacity:0.6} }
+    .policy-active-dot.custom { background: var(--accent); }
+    .sBtn.s-custom { border-color: rgba(108,99,255,0.4); color: #a5a0ff; }
+    .sBtn.active.s-custom { background: rgba(108,99,255,0.12); border-color: var(--accent); color: #a5a0ff; }
+  </style>
+</head>
+<body>
+
+<!-- Topbar -->
+<div class="topbar">
+  <div class="logo">
+    <div class="logo-icon">⚡</div>
+    Nullify AI
+  </div>
+  <div class="topbar-tag">Live PoC Demo</div>
+  <div class="live-dot"></div>
+  <span style="font-size:11px;color:var(--text-faint)">3 agents · 3 policies · real-time enforcement</span>
+  <div class="topbar-right">
+    <a href="../index.html" class="btn btn-ghost">← Hub</a>
+    <a href="../pages/dashboard.html" class="btn btn-primary">Open Dashboard →</a>
+  </div>
+</div>
+
+<!-- Steps -->
+<div class="steps-bar">
+  <div class="step done">
+    <div class="step-num">✓</div>
+    Step 1 — Agent System Connected
+  </div>
+  <div class="step done">
+    <div class="step-num">✓</div>
+    Step 2 — 3 Policies Loaded
+  </div>
+  <div class="step active" id="step-3">
+    <div class="step-num">3</div>
+    Step 3 — Run a Scenario
+  </div>
+  <div class="step pending" id="step-4">
+    <div class="step-num">4</div>
+    Step 4 — Create Your Own Policy
+  </div>
+</div>
+
+<!-- Main 3-column -->
+<div class="main">
+
+  <!-- LEFT: Agents + Policies -->
+  <div class="panel panel-left">
+    <div class="panel-header">🤖 Agents</div>
+    <div class="panel-body">
+
+      <div id="agent-loanbot" class="agent-row">
+        <div class="agent-icon loan">💳</div>
+        <div class="agent-info">
+          <div class="agent-name">LoanBot-α</div>
+          <div class="agent-vert">Loan Underwriting</div>
+        </div>
+        <div class="status-badge healthy" id="status-loanbot">Healthy</div>
+      </div>
+
+      <div id="agent-priorauth" class="agent-row">
+        <div class="agent-icon hc">🏥</div>
+        <div class="agent-info">
+          <div class="agent-name">PriorAuth-HC</div>
+          <div class="agent-vert">Healthcare Prior Auth</div>
+        </div>
+        <div class="status-badge healthy" id="status-priorauth">Healthy</div>
+      </div>
+
+      <div id="agent-fraud" class="agent-row">
+        <div class="agent-icon fraud">🔍</div>
+        <div class="agent-info">
+          <div class="agent-name">FraudScanner-X</div>
+          <div class="agent-vert">Fraud Detection</div>
+        </div>
+        <div class="status-badge healthy" id="status-fraud">Healthy</div>
+      </div>
+
+      <div class="section-divider"></div>
+
+      <div class="panel-header" style="border:none; padding-top:4px;">📋 Active Policies</div>
+
+      <div id="active-policies-list">
+        <div class="policy-row">
+          <div class="policy-active-dot"></div>
+          <div>
+            <div class="policy-code">LOAN-DTI-01</div>
+            <div class="policy-desc">Block loan approvals where debt-to-income ratio exceeds 43%</div>
+          </div>
+        </div>
+
+        <div class="policy-row">
+          <div class="policy-active-dot"></div>
+          <div>
+            <div class="policy-code">HC-FORMULARY-01</div>
+            <div class="policy-desc">Block prior auths where procedure code doesn't match diagnosis in formulary</div>
+          </div>
+        </div>
+
+        <div class="policy-row">
+          <div class="policy-active-dot"></div>
+          <div>
+            <div class="policy-code">FRAUD-DRIFT-01</div>
+            <div class="policy-desc">Escalate high-risk transactions that agent is no longer blocking (block rate drift)</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Create Policy CTA -->
+      <button class="create-policy-btn" id="create-policy-btn" onclick="openPolicyForm()">＋ Create a Policy</button>
+
+      <!-- Inline Policy Form -->
+      <div class="policy-form" id="policy-form">
+        <div class="pf-title">⚙ New Enforcement Policy</div>
+
+        <div class="pf-row">
+          <div class="pf-label">Agent to Govern</div>
+          <select class="pf-select" id="pf-agent" onchange="updateConditions()">
+            <option value="hc">PriorAuth-HC — Healthcare</option>
+            <option value="loan">LoanBot-α — Loan Underwriting</option>
+            <option value="fraud">FraudScanner-X — Fraud Detection</option>
+          </select>
+        </div>
+
+        <div class="pf-row">
+          <div class="pf-label">Condition to Enforce</div>
+          <select class="pf-select" id="pf-condition"></select>
+        </div>
+
+        <div class="pf-row">
+          <div class="pf-label">Action</div>
+          <div class="pf-action-row">
+            <div class="pf-action-opt sel-block" id="opt-block" onclick="selectAction('block')">🚫 Block</div>
+            <div class="pf-action-opt" id="opt-warn" onclick="selectAction('warn')">⚠ Warn</div>
+          </div>
+        </div>
+
+        <div class="pf-btns">
+          <button class="pf-activate" onclick="activatePolicy()">✓ Activate Policy</button>
+          <button class="pf-cancel" onclick="closePolicyForm()">Cancel</button>
+        </div>
+      </div>
+
+      <div class="section-divider"></div>
+      <div style="padding:8px 14px;">
+        <div style="font-size:10px;color:var(--text-faint);text-transform:uppercase;letter-spacing:0.07em;margin-bottom:8px;font-weight:600;">Framework</div>
+        <div style="font-size:11px;color:var(--text-muted);line-height:1.8;">
+          LoanBot-α → <span style="color:var(--accent)">OpenAI SDK</span><br>
+          PriorAuth-HC → <span style="color:var(--teal)">Anthropic API</span><br>
+          FraudScanner-X → <span style="color:var(--amber)">LangChain</span>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- CENTER: Decision Feed -->
+  <div class="panel" style="flex-direction:column;">
+    <div class="feed-header-row">
+      <div class="feed-title">⚡ Live Decision Stream</div>
+      <div style="flex:1;margin:0 12px;">
+        <div style="font-size:10px;color:var(--text-faint);">Every decision routes through Nullify <strong style="color:var(--text-muted)">before</strong> it executes in the real world</div>
+      </div>
+      <div class="feed-speed">
+        Speed:
+        <button class="speed-btn" onclick="setSpeed(2200)">Slow</button>
+        <button class="speed-btn active" onclick="setSpeed(1400)" id="speed-normal">Normal</button>
+        <button class="speed-btn" onclick="setSpeed(600)">Fast</button>
+      </div>
+    </div>
+    <div id="feed"></div>
+  </div>
+
+  <!-- RIGHT: Verdicts + Stats -->
+  <div class="panel panel-right">
+    <div class="panel-header">🛡 Nullify Enforcement</div>
+    <div class="panel-body">
+
+      <div class="stats-grid">
+        <div class="stat-box">
+          <div class="stat-num approved" id="cnt-approved">0</div>
+          <div class="stat-lbl">Approved</div>
+        </div>
+        <div class="stat-box">
+          <div class="stat-num blocked" id="cnt-blocked">0</div>
+          <div class="stat-lbl">Blocked</div>
+        </div>
+        <div class="stat-box">
+          <div class="stat-num escalated" id="cnt-escalated">0</div>
+          <div class="stat-lbl">Escalated</div>
+        </div>
+      </div>
+
+      <div class="right-divider"></div>
+
+      <div style="padding:0 12px 6px; font-size:10px; font-weight:600; text-transform:uppercase; letter-spacing:0.07em; color:var(--text-faint);">Last Blocked Decision</div>
+      <div id="last-blocked">
+        <div class="lb-empty">No blocked decisions yet</div>
+      </div>
+
+      <div id="drift-alert">
+        <div class="da-header">⚠ Behavioral Drift Detected</div>
+        <div class="da-body" id="drift-body">
+          FraudScanner-X block rate collapsed <span class="da-stat">94%</span> in 48h.<br>
+          High-risk transactions passing the agent.<br>
+          Nullify is overriding and blocking.
+        </div>
+      </div>
+
+      <div id="hc-alert" style="margin:8px 12px 0; background:rgba(239,68,68,0.08); border:1px solid rgba(239,68,68,0.25); border-radius:8px; padding:10px; display:none; animation:slideDown 0.3s ease-out;">
+        <div style="font-size:10px;font-weight:700;color:#f87171;text-transform:uppercase;letter-spacing:0.06em;margin-bottom:6px;">🏥 Formulary Failure</div>
+        <div style="font-size:11px;color:var(--text-muted);line-height:1.5;" id="hc-alert-body">
+          PriorAuth-HC formulary lookup broken.<br>
+          Approving <span style="color:#f87171;font-weight:700">mismatched</span> procedure/diagnosis pairs.<br>
+          Each blocked auth = <span style="color:#f87171;font-weight:700">$24K–$38K</span> exposure.
+        </div>
+      </div>
+
+      <div id="custom-policy-alert" style="margin:8px 12px 0; background:rgba(108,99,255,0.08); border:1px solid rgba(108,99,255,0.3); border-radius:8px; padding:10px; display:none; animation:slideDown 0.3s ease-out;">
+        <div style="font-size:10px;font-weight:700;color:#a5a0ff;text-transform:uppercase;letter-spacing:0.06em;margin-bottom:6px;">🛡 Your Policy is Live</div>
+        <div style="font-size:11px;color:var(--text-muted);line-height:1.5;" id="custom-alert-body">
+          Agent decisions are being evaluated<br>
+          against <span style="color:#a5a0ff;font-weight:700">your custom policy</span> in real time.<br>
+          Violations appear as BLOCKED in the feed.
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+</div>
+
+<!-- Scenario bar -->
+<div class="scenario-bar">
+  <div class="scenario-label">Run a Scenario →</div>
+  <div class="scenario-btns">
+    <button class="sBtn s-baseline active" onclick="setScenario('baseline')">
+      ✅ 1. Baseline — All Healthy
+    </button>
+    <button class="sBtn s-hc" onclick="setScenario('hc_crisis')">
+      🏥 2. Healthcare Violation
+    </button>
+    <button class="sBtn s-fraud" onclick="setScenario('fraud_drift')">
+      🚨 3. Fraud Model Drift
+    </button>
+    <button class="sBtn s-crisis" onclick="setScenario('full_crisis')">
+      🔴 4. Full Emergency
+    </button>
+    <button class="sBtn sBtn-reset" onclick="resetDemo()" style="margin-left:auto;">
+      ↺ Reset
+    </button>
+  </div>
+  <div id="scenario-btns-extra" style="display:flex;gap:8px;margin-top:6px;"></div>
+  <div class="scenario-desc" id="scenario-desc">All 3 agents operating normally. Nullify evaluating decisions — no violations.</div>
+</div>
+
+<script>
+// ─────────────────────────────────────────────
+// DECISION DATA
+// ─────────────────────────────────────────────
+const DECISIONS = {
+  baseline: [
+    { agent:'LoanBot-α',     cls:'loan',  type:'loan_approval',  payload:'DTI 38% · $45,000 · applicant CA-1847 · 720 FICO',   verdict:'APPROVED', ms:4 },
+    { agent:'PriorAuth-HC',  cls:'hc',    type:'prior_auth',     payload:'CPT-99213 · J06.9 (Upper resp. infection) · BCBS-PPO',verdict:'APPROVED', ms:6 },
+    { agent:'FraudScanner-X',cls:'fraud', type:'fraud_check',    payload:'$127.50 · Amazon.com · risk score 0.08',              verdict:'APPROVED', ms:3 },
+    { agent:'FraudScanner-X',cls:'fraud', type:'fraud_check',    payload:'$1,847 · Wire Transfer · risk score 0.91',           verdict:'BLOCKED',  rule:'FRAUD-RISK-01', ms:5 },
+    { agent:'LoanBot-α',     cls:'loan',  type:'loan_approval',  payload:'DTI 41% · $72,000 · applicant NY-0934 · 680 FICO',   verdict:'APPROVED', ms:4 },
+    { agent:'PriorAuth-HC',  cls:'hc',    type:'prior_auth',     payload:'CPT-71046 · J18.9 (Pneumonia) · BCBS-PPO',           verdict:'APPROVED', ms:7 },
+    { agent:'LoanBot-α',     cls:'loan',  type:'loan_approval',  payload:'DTI 35% · $28,000 · applicant TX-2210 · 755 FICO',   verdict:'APPROVED', ms:3 },
+    { agent:'FraudScanner-X',cls:'fraud', type:'fraud_check',    payload:'$89.99 · Netflix · risk score 0.02',                 verdict:'APPROVED', ms:2 },
+    { agent:'PriorAuth-HC',  cls:'hc',    type:'prior_auth',     payload:'CPT-93000 · I10 (Hypertension) · Aetna-HMO',         verdict:'APPROVED', ms:5 },
+    { agent:'LoanBot-α',     cls:'loan',  type:'loan_approval',  payload:'DTI 39% · $55,000 · applicant WA-5571 · 700 FICO',   verdict:'APPROVED', ms:4 },
+  ],
+
+  hc_crisis: [
+    { agent:'PriorAuth-HC',  cls:'hc',    type:'prior_auth',     payload:'CPT-27447 (knee replacement) · F32.9 (Major depression) ⚠',                  verdict:'BLOCKED',   rule:'HC-FORMULARY-01', exposure:38000, ms:6 },
+    { agent:'LoanBot-α',     cls:'loan',  type:'loan_approval',  payload:'DTI 39% · $55,000 · applicant WA-5571',                                       verdict:'APPROVED',  ms:4 },
+    { agent:'PriorAuth-HC',  cls:'hc',    type:'prior_auth',     payload:'CPT-27447 (knee replacement) · F41.1 (Generalized anxiety) ⚠',                verdict:'BLOCKED',   rule:'HC-FORMULARY-01', exposure:38000, ms:5 },
+    { agent:'FraudScanner-X',cls:'fraud', type:'fraud_check',    payload:'$2,100 · Wire · risk score 0.88',                                             verdict:'BLOCKED',   rule:'FRAUD-RISK-01',   ms:4 },
+    { agent:'PriorAuth-HC',  cls:'hc',    type:'prior_auth',     payload:'CPT-23472 (shoulder arthroplasty) · F32.9 (Major depression) ⚠',              verdict:'BLOCKED',   rule:'HC-FORMULARY-01', exposure:24000, ms:6 },
+    { agent:'LoanBot-α',     cls:'loan',  type:'loan_approval',  payload:'DTI 42% · $61,000 · applicant CA-9002',                                       verdict:'APPROVED',  ms:4 },
+    { agent:'PriorAuth-HC',  cls:'hc',    type:'prior_auth',     payload:'CPT-27447 (knee replacement) · F33.0 (Recurrent MDD) ⚠',                      verdict:'BLOCKED',   rule:'HC-FORMULARY-01', exposure:38000, ms:7 },
+    { agent:'PriorAuth-HC',  cls:'hc',    type:'prior_auth',     payload:'CPT-71046 (chest X-ray) · J18.9 (Pneumonia) — valid',                         verdict:'APPROVED',  ms:5 },
+    { agent:'PriorAuth-HC',  cls:'hc',    type:'prior_auth',     payload:'CPT-27447 (knee replacement) · F40.10 (Social anxiety) ⚠',                    verdict:'ESCALATED', rule:'HC-FORMULARY-01', ms:6 },
+  ],
+
+  fraud_drift: [
+    { agent:'FraudScanner-X',cls:'fraud', type:'fraud_check',    payload:'$3,200 · Wire Transfer · risk 0.91 — Agent said: APPROVED',  verdict:'BLOCKED',   rule:'FRAUD-DRIFT-01', driftAlert:true, ms:8 },
+    { agent:'LoanBot-α',     cls:'loan',  type:'loan_approval',  payload:'DTI 37% · $48,000 · applicant OR-3314',                     verdict:'APPROVED',  ms:4 },
+    { agent:'FraudScanner-X',cls:'fraud', type:'fraud_check',    payload:'$890 · Crypto Exchange · risk 0.86 — Agent said: APPROVED',  verdict:'BLOCKED',   rule:'FRAUD-DRIFT-01', driftAlert:true, ms:7 },
+    { agent:'PriorAuth-HC',  cls:'hc',    type:'prior_auth',     payload:'CPT-93000 · I10 (Hypertension) · Aetna-HMO',                verdict:'APPROVED',  ms:5 },
+    { agent:'FraudScanner-X',cls:'fraud', type:'fraud_check',    payload:'$5,100 · Overseas Wire · risk 0.94 — Agent said: APPROVED',  verdict:'BLOCKED',   rule:'FRAUD-DRIFT-01', driftAlert:true, ms:6 },
+    { agent:'FraudScanner-X',cls:'fraud', type:'fraud_check',    payload:'$220 · Starbucks · risk 0.03',                              verdict:'APPROVED',  ms:2 },
+    { agent:'FraudScanner-X',cls:'fraud', type:'fraud_check',    payload:'$12,400 · Int\'l Wire · risk 0.97 — Agent said: APPROVED',   verdict:'BLOCKED',   rule:'FRAUD-DRIFT-01', driftAlert:true, ms:9 },
+    { agent:'LoanBot-α',     cls:'loan',  type:'loan_approval',  payload:'DTI 40% · $63,000 · applicant MN-0271',                    verdict:'APPROVED',  ms:4 },
+  ],
+
+  full_crisis: [
+    { agent:'PriorAuth-HC',  cls:'hc',    type:'prior_auth',     payload:'CPT-27447 · F32.9 (Major depression) ⚠',                   verdict:'BLOCKED',   rule:'HC-FORMULARY-01', exposure:38000, ms:6 },
+    { agent:'FraudScanner-X',cls:'fraud', type:'fraud_check',    payload:'$4,800 · Wire · risk 0.93 — Agent said: APPROVED',          verdict:'BLOCKED',   rule:'FRAUD-DRIFT-01', driftAlert:true, ms:8 },
+    { agent:'LoanBot-α',     cls:'loan',  type:'loan_approval',  payload:'DTI 51% · $85,000 · applicant TX-8820 ⚠',                  verdict:'BLOCKED',   rule:'LOAN-DTI-01',     ms:4 },
+    { agent:'PriorAuth-HC',  cls:'hc',    type:'prior_auth',     payload:'CPT-23472 · F41.1 (Anxiety) ⚠',                            verdict:'BLOCKED',   rule:'HC-FORMULARY-01', exposure:24000, ms:5 },
+    { agent:'FraudScanner-X',cls:'fraud', type:'fraud_check',    payload:'$7,300 · Crypto · risk 0.96 — Agent said: APPROVED',        verdict:'BLOCKED',   rule:'FRAUD-DRIFT-01', driftAlert:true, ms:7 },
+    { agent:'LoanBot-α',     cls:'loan',  type:'loan_approval',  payload:'DTI 48% · $92,000 · applicant FL-2240 ⚠',                  verdict:'BLOCKED',   rule:'LOAN-DTI-01',     ms:3 },
+    { agent:'PriorAuth-HC',  cls:'hc',    type:'prior_auth',     payload:'CPT-27447 · F33.0 (Recurrent MDD) ⚠',                      verdict:'BLOCKED',   rule:'HC-FORMULARY-01', exposure:38000, ms:6 },
+    { agent:'FraudScanner-X',cls:'fraud', type:'fraud_check',    payload:'$2,900 · Int\'l Wire · risk 0.89 — Agent said: APPROVED',   verdict:'BLOCKED',   rule:'FRAUD-DRIFT-01', driftAlert:true, ms:8 },
+  ]
+}
+
+const SCENARIO_META = {
+  baseline:    { desc:'All 3 agents operating normally. Nullify evaluating decisions — no violations.', agents:{ loanbot:'healthy', priorauth:'healthy', fraud:'healthy' } },
+  hc_crisis:   { desc:'PriorAuth-HC formulary lookup broken — approving invalid procedure/diagnosis pairs. Nullify blocking each one.', agents:{ loanbot:'healthy', priorauth:'critical', fraud:'healthy' } },
+  fraud_drift: { desc:'FraudScanner-X model degraded — block rate collapsed 94%. High-risk transactions passing the agent. Nullify detected the drift and is overriding.', agents:{ loanbot:'healthy', priorauth:'healthy', fraud:'critical' } },
+  full_crisis: { desc:'FULL EMERGENCY: All three policy violations active. PriorAuth + FraudScanner critical. LoanBot crossing DTI thresholds.', agents:{ loanbot:'warning', priorauth:'critical', fraud:'critical' } }
+}
+
+// ─────────────────────────────────────────────
+// STATE
+// ─────────────────────────────────────────────
+let currentScenario = 'baseline'
+let decisionIdx     = 0
+let intervalId      = null
+let intervalMs      = 1400
+let stats           = { approved:0, blocked:0, escalated:0 }
+let lastBlocked     = null
+const MAX_CARDS     = 12
+
+// ─────────────────────────────────────────────
+// UTILS
+// ─────────────────────────────────────────────
+const sleep = ms => new Promise(r => setTimeout(r, ms))
+const el    = id  => document.getElementById(id)
+
+// ─────────────────────────────────────────────
+// SPEED CONTROL
+// ─────────────────────────────────────────────
+function setSpeed(ms) {
+  intervalMs = ms
+  document.querySelectorAll('.speed-btn').forEach(b => b.classList.remove('active'))
+  event.target.classList.add('active')
+  if (intervalId) { clearInterval(intervalId); startLoop() }
+}
+
+// ─────────────────────────────────────────────
+// SCENARIO CONTROL
+// ─────────────────────────────────────────────
+function setScenario(name) {
+  currentScenario = name
+  decisionIdx = 0
+
+  // Update button styles
+  document.querySelectorAll('.sBtn').forEach(b => b.classList.remove('active'))
+  const clsMap = { baseline:'baseline', hc_crisis:'hc', fraud_drift:'fraud', full_crisis:'crisis', custom:'custom' }
+  const clicked = document.querySelector(`.s-${clsMap[name] || name}`)
+  if (clicked) clicked.classList.add('active')
+
+  // Update description
+  el('scenario-desc').textContent = SCENARIO_META[name].desc
+
+  // Update agent statuses
+  const statuses = SCENARIO_META[name].agents
+  setAgentStatus('loanbot',   statuses.loanbot)
+  setAgentStatus('priorauth', statuses.priorauth)
+  setAgentStatus('fraud',     statuses.fraud)
+
+  // Show/hide alerts
+  el('drift-alert').classList.toggle('visible', name === 'fraud_drift' || name === 'full_crisis')
+  el('hc-alert').style.display = (name === 'hc_crisis' || name === 'full_crisis') ? 'block' : 'none'
+
+  // Show custom policy alert if applicable
+  const customAlert = el('custom-policy-alert')
+  if (customAlert) customAlert.style.display = name === 'custom' ? 'block' : 'none'
+}
+
+function setAgentStatus(id, status) {
+  const badge = el(`status-${id}`)
+  badge.className = `status-badge ${status}`
+  badge.textContent = status.charAt(0).toUpperCase() + status.slice(1)
+}
+
+// ─────────────────────────────────────────────
+// DECISION PROCESSING
+// ─────────────────────────────────────────────
+async function fireDecision() {
+  const pool = DECISIONS[currentScenario]
+  const d    = pool[decisionIdx % pool.length]
+  decisionIdx++
+
+  const feed = el('feed')
+
+  // Remove oldest cards if too many
+  while (feed.children.length >= MAX_CARDS) {
+    feed.removeChild(feed.lastChild)
+  }
+
+  // Create card in "evaluating" state
+  const card = document.createElement('div')
+  card.className = 'dcard evaluating'
+  card.innerHTML = `
+    <div class="dcard-top">
+      <span class="agent-chip ${d.cls}">${d.agent}</span>
+      <span class="dtype">${d.type}</span>
+      <span class="dlatency">${d.ms}ms</span>
+    </div>
+    <div class="dpayload">${d.payload}</div>
+    <div class="dcard-verdict">
+      <div class="evaluating-pulse"><div class="ep-dot"></div> Evaluating…</div>
+    </div>
+  `
+
+  feed.insertBefore(card, feed.firstChild)
+  await sleep(480)
+
+  // Resolve to verdict
+  card.className = `dcard ${d.verdict.toLowerCase()}${d.verdict === 'BLOCKED' ? ' flash-block' : ''}`
+
+  let verdictHTML = `<span class="vbadge ${d.verdict.toLowerCase()}">${d.verdict}</span>`
+
+  if (d.rule)       verdictHTML += ` <span class="vrule">· ${d.rule}</span>`
+  if (d.exposure)   verdictHTML += ` <span class="vexposure">· $${d.exposure.toLocaleString()} exposure</span>`
+  if (d.driftAlert) verdictHTML += ` <span class="vdrift">· Agent overridden — drift detected</span>`
+
+  card.querySelector('.dcard-verdict').innerHTML = verdictHTML
+
+  // Update stats
+  const key = d.verdict.toLowerCase() + 'd'
+  if (d.verdict === 'APPROVED')  { stats.approved++;  el('cnt-approved').textContent  = stats.approved  }
+  if (d.verdict === 'BLOCKED')   { stats.blocked++;   el('cnt-blocked').textContent   = stats.blocked   }
+  if (d.verdict === 'ESCALATED') { stats.escalated++; el('cnt-escalated').textContent = stats.escalated }
+
+  // Update last blocked panel
+  if (d.verdict === 'BLOCKED' || d.verdict === 'ESCALATED') {
+    updateLastBlocked(d)
+  }
+}
+
+function updateLastBlocked(d) {
+  const lbEl = el('last-blocked')
+  const expRow = d.exposure ? `<div class="lb-row"><span class="lb-key">Exposure</span><span class="lb-val" style="color:#f87171">$${d.exposure.toLocaleString()}</span></div>` : ''
+  const driftRow = d.driftAlert ? `<div class="lb-row"><span class="lb-key">Reason</span><span class="lb-val" style="color:var(--amber)">Agent drift override</span></div>` : ''
+
+  lbEl.innerHTML = `
+    <div class="lb-header">🔴 ${d.verdict}</div>
+    <div class="lb-row"><span class="lb-key">Agent</span><span class="lb-val">${d.agent}</span></div>
+    <div class="lb-row"><span class="lb-key">Decision</span><span class="lb-val">${d.type}</span></div>
+    <div class="lb-row"><span class="lb-key">Rule</span><span class="lb-val" style="color:#f87171">${d.rule || '—'}</span></div>
+    ${expRow}
+    ${driftRow}
+  `
+}
+
+// ─────────────────────────────────────────────
+// LOOP
+// ─────────────────────────────────────────────
+function startLoop() {
+  intervalId = setInterval(fireDecision, intervalMs)
+}
+
+function resetDemo() {
+  clearInterval(intervalId)
+  stats = { approved:0, blocked:0, escalated:0 }
+  el('cnt-approved').textContent  = 0
+  el('cnt-blocked').textContent   = 0
+  el('cnt-escalated').textContent = 0
+  el('feed').innerHTML = ''
+  el('last-blocked').innerHTML = '<div class="lb-empty">No blocked decisions yet</div>'
+  el('drift-alert').classList.remove('visible')
+  el('hc-alert').style.display = 'none'
+  if (el('custom-policy-alert')) el('custom-policy-alert').style.display = 'none'
+  el('scenario-desc').textContent = SCENARIO_META.baseline.desc
+
+  document.querySelectorAll('.sBtn').forEach(b => b.classList.remove('active'))
+  document.querySelector('.s-baseline').classList.add('active')
+
+  setAgentStatus('loanbot',   'healthy')
+  setAgentStatus('priorauth', 'healthy')
+  setAgentStatus('fraud',     'healthy')
+
+  // Reset custom policy UI
+  const policyRows = el('active-policies-list').querySelectorAll('.policy-row')
+  policyRows.forEach((r, i) => { if (i >= 3) r.remove() })
+  el('scenario-btns-extra').innerHTML = ''
+  el('policy-form').classList.remove('visible')
+  el('create-policy-btn').textContent = '＋ Create a Policy'
+  el('create-policy-btn').style.display = 'block'
+  el('step-4').className = 'step pending'
+  el('step-4').innerHTML = '<div class="step-num">4</div> Step 4 — Create Your Own Policy'
+  customPolicyCounter = 1
+  delete DECISIONS['custom']
+  delete SCENARIO_META['custom']
+
+  currentScenario = 'baseline'
+  decisionIdx = 0
+  startLoop()
+}
+
+// ─────────────────────────────────────────────
+// POLICY FORM
+// ─────────────────────────────────────────────
+let customPolicyCounter = 1
+let selectedAction = 'block'
+
+const CONDITIONS = {
+  hc: [
+    'Block authorizations where procedure doesn\'t match diagnosis',
+    'Block experimental treatments not in approved formulary',
+    'Block duplicate authorizations submitted within 30 days',
+    'Block high-cost procedures ($20K+) without secondary review',
+  ],
+  loan: [
+    'Block loan approvals where DTI exceeds 50%',
+    'Block applicants with credit score below 620',
+    'Block loans over $100K without verified collateral',
+    'Block refinance requests within 6 months of origination',
+  ],
+  fraud: [
+    'Block international wire transfers above $2,000',
+    'Block transactions at high-risk merchant categories',
+    'Block transaction velocity spikes over 300% in 1 hour',
+    'Block crypto exchange transfers over $500',
+  ]
+}
+
+const CUSTOM_DECISION_POOLS = {
+  hc: [
+    { type:'prior_auth', payload:'CPT-27447 (knee replacement) · F32.9 (Major depression) · BCBS-PPO — caught by custom policy' },
+    { type:'prior_auth', payload:'CPT-23472 (shoulder arthroplasty) · F41.1 (Anxiety disorder) · Aetna — caught by custom policy' },
+    { type:'prior_auth', payload:'CPT-70553 (brain MRI) · J18.9 (Pneumonia) · UHC — caught by custom policy' },
+    { type:'prior_auth', payload:'CPT-43239 (endoscopy) · M54.5 (Lower back pain) · BCBS — caught by custom policy' },
+  ],
+  loan: [
+    { type:'loan_approval', payload:'DTI 57% · $98,000 · applicant CA-3391 · 590 FICO — caught by custom policy' },
+    { type:'loan_approval', payload:'DTI 62% · $120,000 · applicant TX-8820 · 580 FICO — caught by custom policy' },
+    { type:'loan_approval', payload:'DTI 53% · $78,000 · applicant FL-1105 · 605 FICO — caught by custom policy' },
+    { type:'loan_approval', payload:'DTI 49% · $64,000 · applicant NY-2271 · 615 FICO — caught by custom policy' },
+  ],
+  fraud: [
+    { type:'fraud_check', payload:'$3,800 · Crypto Exchange · velocity spike +340% · risk 0.87 — caught by custom policy' },
+    { type:'fraud_check', payload:'$8,100 · Int\'l Wire · high-risk merchant · risk 0.91 — caught by custom policy' },
+    { type:'fraud_check', payload:'$2,800 · Foreign ATM · geographic anomaly · risk 0.84 — caught by custom policy' },
+    { type:'fraud_check', payload:'$15,400 · Overseas Wire · transaction pattern anomaly · risk 0.95 — caught by custom policy' },
+  ]
+}
+
+function updateConditions() {
+  const agent = el('pf-agent').value
+  const sel = el('pf-condition')
+  sel.innerHTML = ''
+  CONDITIONS[agent].forEach(c => {
+    const opt = document.createElement('option')
+    opt.value = c
+    opt.textContent = c
+    sel.appendChild(opt)
+  })
+}
+
+function selectAction(action) {
+  selectedAction = action
+  el('opt-block').className = 'pf-action-opt' + (action === 'block' ? ' sel-block' : '')
+  el('opt-warn').className  = 'pf-action-opt' + (action === 'warn'  ? ' sel-warn'  : '')
+}
+
+function openPolicyForm() {
+  el('policy-form').classList.add('visible')
+  el('create-policy-btn').style.display = 'none'
+  updateConditions()
+  // Activate Step 4
+  el('step-4').className = 'step active'
+}
+
+function closePolicyForm() {
+  el('policy-form').classList.remove('visible')
+  el('create-policy-btn').style.display = 'block'
+  el('step-4').className = 'step pending'
+}
+
+function activatePolicy() {
+  const agentKey  = el('pf-agent').value
+  const agentName = { hc:'PriorAuth-HC', loan:'LoanBot-α', fraud:'FraudScanner-X' }[agentKey]
+  const condition = el('pf-condition').value
+  const verdict   = selectedAction === 'warn' ? 'ESCALATED' : 'BLOCKED'
+  const policyCode = `CUSTOM-0${customPolicyCounter++}`
+
+  // Add policy row to the active list
+  const list = el('active-policies-list')
+  const row = document.createElement('div')
+  row.className = 'policy-row'
+  row.innerHTML = `
+    <div class="policy-active-dot custom"></div>
+    <div>
+      <div class="policy-code" style="color:#a5a0ff">
+        ${policyCode} <span class="policy-new-badge">NEW</span>
+      </div>
+      <div class="policy-desc">${condition.length > 55 ? condition.slice(0,55)+'…' : condition}</div>
+    </div>
+  `
+  list.appendChild(row)
+
+  // Build custom scenario decisions
+  const pool = CUSTOM_DECISION_POOLS[agentKey]
+  const filler = [
+    { agent:'LoanBot-α',     cls:'loan',  type:'loan_approval', payload:'DTI 36% · $52,000 · applicant WA-1104', verdict:'APPROVED', ms:4 },
+    { agent:'FraudScanner-X',cls:'fraud', type:'fraud_check',   payload:'$34.00 · Amazon · risk 0.01',           verdict:'APPROVED', ms:2 },
+    { agent:'PriorAuth-HC',  cls:'hc',    type:'prior_auth',    payload:'CPT-93000 · I10 (Hypertension) · Aetna', verdict:'APPROVED', ms:5 },
+  ]
+
+  const custom = []
+  pool.forEach((d, i) => {
+    if (i === 0) custom.push({ ...filler[0] })
+    custom.push({ agent:agentName, cls:agentKey, type:d.type, payload:d.payload, verdict, rule:policyCode, ms:6, customPolicy:true })
+    if (i === 1) custom.push({ ...filler[1] })
+    if (i === 2) custom.push({ ...filler[2] })
+  })
+
+  DECISIONS['custom'] = custom
+  SCENARIO_META['custom'] = {
+    desc: `Policy ${policyCode} is live — ${agentName} violations are being ${verdict === 'BLOCKED' ? 'BLOCKED' : 'ESCALATED'} in real time.`,
+    agents: {
+      loanbot:   agentKey === 'loan'  ? 'warning' : 'healthy',
+      priorauth: agentKey === 'hc'    ? 'warning' : 'healthy',
+      fraud:     agentKey === 'fraud' ? 'warning' : 'healthy'
+    }
+  }
+
+  // Add scenario button
+  el('scenario-btns-extra').innerHTML = `
+    <button class="sBtn s-custom active" onclick="setScenario('custom')" id="btn-custom">
+      🛡 My Policy: ${policyCode}
+    </button>
+  `
+
+  // Update steps
+  el('step-4').className = 'step done'
+  el('step-4').innerHTML = '<div class="step-num">✓</div> Step 4 — Policy Active'
+
+  // Hide form, restore button
+  el('policy-form').classList.remove('visible')
+  el('create-policy-btn').textContent = '＋ Add Another Policy'
+  el('create-policy-btn').style.display = 'block'
+
+  // Switch to custom scenario
+  setScenario('custom')
+}
+
+// ─────────────────────────────────────────────
+// INIT
+// ─────────────────────────────────────────────
+startLoop()
+// Fire first decision immediately so screen isn't empty
+fireDecision()
+</script>
+</body>
+</html>
