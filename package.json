@@ -1,0 +1,25 @@
+{
+  "name": "nullify-ai-prototype",
+  "version": "1.0.0",
+  "description": "Nullify AI — Real-time decision enforcement for AI agents in regulated industries. Interactive front-end prototype.",
+  "private": true,
+  "scripts": {
+    "start": "python3 -m http.server 3000",
+    "dev": "npx serve . -p 3000",
+    "deploy:netlify": "npx netlify deploy --prod --dir .",
+    "deploy:vercel": "npx vercel --prod"
+  },
+  "keywords": [
+    "ai-governance",
+    "ai-safety",
+    "compliance",
+    "fintech",
+    "healthcare",
+    "insurance",
+    "eu-ai-act",
+    "prototype"
+  ],
+  "author": "",
+  "license": "MIT",
+  "homepage": "https://github.com/YOUR_USERNAME/nullify-ai-prototype"
+}

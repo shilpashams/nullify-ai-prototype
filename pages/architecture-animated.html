@@ -1,0 +1,768 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Nullify AI — System Architecture</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    background: #0a0a0f;
+    font-family: 'Segoe UI', system-ui, sans-serif;
+    color: #e2e8f0;
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    overflow: hidden;
+  }
+
+  /* ── Header ── */
+  .header {
+    text-align: center;
+    margin-bottom: 28px;
+    animation: fadeDown 0.8s ease both;
+  }
+  .header .logo {
+    font-size: 11px;
+    letter-spacing: 4px;
+    text-transform: uppercase;
+    color: #7c3aed;
+    margin-bottom: 6px;
+  }
+  .header h1 {
+    font-size: 26px;
+    font-weight: 700;
+    color: #f1f5f9;
+    letter-spacing: -0.5px;
+  }
+  .header h1 span { color: #a78bfa; }
+  .header .tagline {
+    font-size: 12px;
+    color: #64748b;
+    margin-top: 4px;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+  }
+
+  /* ── Latency badge ── */
+  .latency-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    background: rgba(124,58,237,0.15);
+    border: 1px solid rgba(124,58,237,0.4);
+    border-radius: 20px;
+    padding: 4px 14px;
+    font-size: 11px;
+    color: #a78bfa;
+    margin-top: 10px;
+    letter-spacing: 0.5px;
+  }
+  .latency-badge::before {
+    content: '';
+    width: 6px; height: 6px;
+    border-radius: 50%;
+    background: #7c3aed;
+    animation: pulse 1.5s infinite;
+  }
+
+  /* ── Main canvas ── */
+  .arch-canvas {
+    width: 960px;
+    position: relative;
+    animation: fadeUp 0.9s 0.2s ease both;
+  }
+
+  /* ── Columns ── */
+  .columns {
+    display: grid;
+    grid-template-columns: 180px 40px 220px 40px 220px 40px 180px;
+    gap: 0;
+    align-items: start;
+  }
+
+  /* ── Column header ── */
+  .col-header {
+    text-align: center;
+    padding: 8px 12px;
+    border-radius: 8px 8px 0 0;
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    margin-bottom: 12px;
+  }
+  .col-header.agents   { background: rgba(59,130,246,0.15); color: #60a5fa; border-top: 2px solid #3b82f6; }
+  .col-header.nullify  { background: rgba(124,58,237,0.15); color: #a78bfa; border-top: 2px solid #7c3aed; }
+  .col-header.verdicts { background: rgba(16,185,129,0.15); color: #34d399; border-top: 2px solid #10b981; }
+  .col-header.systems  { background: rgba(245,158,11,0.15); color: #fbbf24; border-top: 2px solid #f59e0b; }
+
+  /* ── Node card ── */
+  .node {
+    border-radius: 10px;
+    padding: 12px 14px;
+    margin-bottom: 10px;
+    position: relative;
+    transition: transform 0.2s, box-shadow 0.2s;
+    cursor: default;
+  }
+  .node:hover { transform: translateY(-2px); }
+
+  .node .node-icon { font-size: 18px; margin-bottom: 4px; }
+  .node .node-label { font-size: 12px; font-weight: 600; color: #f1f5f9; }
+  .node .node-sub   { font-size: 10px; color: #94a3b8; margin-top: 2px; line-height: 1.4; }
+
+  /* Agent nodes */
+  .node.agent {
+    background: rgba(30,41,59,0.9);
+    border: 1px solid rgba(59,130,246,0.35);
+    box-shadow: 0 0 0 0 rgba(59,130,246,0);
+  }
+  .node.agent.active {
+    border-color: rgba(59,130,246,0.8);
+    box-shadow: 0 0 18px rgba(59,130,246,0.3);
+  }
+
+  /* Nullify components */
+  .node.nullify-comp {
+    background: rgba(30,20,60,0.9);
+    border: 1px solid rgba(124,58,237,0.4);
+  }
+  .node.nullify-comp.active {
+    border-color: rgba(167,139,250,0.9);
+    box-shadow: 0 0 18px rgba(124,58,237,0.4);
+  }
+  .node.nullify-core {
+    background: rgba(60,20,120,0.5);
+    border: 2px solid #7c3aed;
+    box-shadow: 0 0 24px rgba(124,58,237,0.25);
+  }
+  .node.nullify-core.active {
+    box-shadow: 0 0 36px rgba(124,58,237,0.6);
+  }
+
+  /* Verdict nodes */
+  .node.verdict-approved { background: rgba(16,185,129,0.12); border: 1px solid rgba(16,185,129,0.4); }
+  .node.verdict-blocked  { background: rgba(239,68,68,0.12);  border: 1px solid rgba(239,68,68,0.4);  }
+  .node.verdict-escalate { background: rgba(245,158,11,0.12); border: 1px solid rgba(245,158,11,0.4); }
+  .node.verdict-approved.active { box-shadow: 0 0 20px rgba(16,185,129,0.5); border-color: #10b981; }
+  .node.verdict-blocked.active  { box-shadow: 0 0 20px rgba(239,68,68,0.5);  border-color: #ef4444; }
+  .node.verdict-escalate.active { box-shadow: 0 0 20px rgba(245,158,11,0.5); border-color: #f59e0b; }
+
+  /* System nodes */
+  .node.system {
+    background: rgba(30,41,59,0.9);
+    border: 1px solid rgba(245,158,11,0.3);
+  }
+  .node.system.active {
+    border-color: rgba(245,158,11,0.8);
+    box-shadow: 0 0 18px rgba(245,158,11,0.25);
+  }
+
+  /* ── Arrow columns ── */
+  .arrow-col {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding-top: 30px;
+    position: relative;
+    min-height: 380px;
+  }
+
+  /* ── SVG arrows ── */
+  .arrow-svg { width: 40px; overflow: visible; }
+
+  /* ── Flowing dot ── */
+  .flow-dot {
+    fill: none;
+    stroke-width: 2;
+  }
+  .flow-dot.blue   { stroke: #3b82f6; }
+  .flow-dot.purple { stroke: #7c3aed; }
+  .flow-dot.green  { stroke: #10b981; }
+  .flow-dot.amber  { stroke: #f59e0b; }
+
+  /* ── Verdict badge ── */
+  .verdict-pill {
+    position: absolute;
+    top: -6px;
+    right: -6px;
+    font-size: 9px;
+    font-weight: 800;
+    letter-spacing: 1px;
+    padding: 2px 6px;
+    border-radius: 10px;
+    text-transform: uppercase;
+  }
+  .verdict-pill.approved { background: #10b981; color: #fff; }
+  .verdict-pill.blocked  { background: #ef4444; color: #fff; }
+  .verdict-pill.escalate { background: #f59e0b; color: #000; }
+
+  /* ── Step indicator ── */
+  .step-indicator {
+    display: flex;
+    justify-content: center;
+    gap: 32px;
+    margin-top: 28px;
+    animation: fadeUp 0.9s 0.4s ease both;
+  }
+  .step {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 11px;
+    color: #64748b;
+    transition: color 0.3s;
+  }
+  .step.active { color: #a78bfa; }
+  .step.done   { color: #10b981; }
+  .step-num {
+    width: 22px; height: 22px;
+    border-radius: 50%;
+    border: 1.5px solid #334155;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 10px; font-weight: 700;
+    transition: all 0.3s;
+    flex-shrink: 0;
+  }
+  .step.active .step-num { border-color: #7c3aed; background: rgba(124,58,237,0.2); color: #a78bfa; }
+  .step.done   .step-num { border-color: #10b981; background: rgba(16,185,129,0.2); color: #10b981; }
+
+  /* ── Intercept label ── */
+  .intercept-banner {
+    text-align: center;
+    font-size: 9px;
+    font-weight: 700;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    color: #7c3aed;
+    opacity: 0.7;
+    margin-bottom: 6px;
+  }
+
+  /* ── Latency strip ── */
+  .latency-strip {
+    display: flex;
+    border-radius: 6px;
+    overflow: hidden;
+    margin-top: 8px;
+    font-size: 9px;
+    font-weight: 600;
+    text-align: center;
+  }
+  .lat-seg {
+    flex: 1;
+    padding: 4px 2px;
+    letter-spacing: 0.3px;
+  }
+  .lat-seg.l1 { background: rgba(124,58,237,0.3); color: #c4b5fd; }
+  .lat-seg.l2 { background: rgba(59,130,246,0.3); color: #93c5fd; }
+  .lat-seg.l3 { background: rgba(16,185,129,0.3); color: #6ee7b7; }
+  .lat-seg.l4 { background: rgba(245,158,11,0.3); color: #fde68a; }
+  .lat-total  { background: rgba(255,255,255,0.08); color: #f1f5f9; font-weight: 800; padding: 4px 6px; }
+
+  /* ── Scenario control ── */
+  .scenario-bar {
+    display: flex;
+    gap: 10px;
+    justify-content: center;
+    margin-top: 22px;
+    animation: fadeUp 0.9s 0.5s ease both;
+  }
+  .scn-btn {
+    padding: 7px 18px;
+    border-radius: 20px;
+    border: 1.5px solid;
+    font-size: 11px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s;
+    background: transparent;
+    letter-spacing: 0.5px;
+  }
+  .scn-btn.green  { border-color: #10b981; color: #34d399; }
+  .scn-btn.red    { border-color: #ef4444; color: #f87171; }
+  .scn-btn.amber  { border-color: #f59e0b; color: #fbbf24; }
+  .scn-btn.purple { border-color: #7c3aed; color: #a78bfa; }
+  .scn-btn:hover  { background: rgba(255,255,255,0.06); transform: translateY(-1px); }
+  .scn-btn.active-btn { background: rgba(255,255,255,0.1); }
+
+  /* ── Animations ── */
+  @keyframes fadeDown { from { opacity:0; transform: translateY(-16px); } to { opacity:1; transform: none; } }
+  @keyframes fadeUp   { from { opacity:0; transform: translateY(16px);  } to { opacity:1; transform: none; } }
+  @keyframes pulse    { 0%,100% { opacity:1; } 50% { opacity:0.3; } }
+  @keyframes glow     { 0%,100% { opacity:0.6; } 50% { opacity:1; } }
+
+  /* Animated dashed pipe between arrow columns */
+  .pipe {
+    stroke-dasharray: 6 4;
+    stroke-dashoffset: 0;
+    animation: dash 1s linear infinite;
+  }
+  @keyframes dash { to { stroke-dashoffset: -20; } }
+
+  /* Packet dot animation */
+  .packet { animation: moveDot 1.2s ease-in-out infinite; }
+  @keyframes moveDot { 0% { offset-distance: 0%; opacity:0; } 10% { opacity:1; } 90% { opacity:1; } 100% { offset-distance: 100%; opacity:0; } }
+
+  /* verdict glow pulse */
+  @keyframes verdictPop { 0% { transform: scale(1); } 30% { transform: scale(1.08); } 100% { transform: scale(1); } }
+  .verdict-pop { animation: verdictPop 0.4s ease; }
+
+  /* Nullify core shimmer */
+  @keyframes shimmer { 0%,100% { box-shadow: 0 0 24px rgba(124,58,237,0.25); } 50% { box-shadow: 0 0 48px rgba(124,58,237,0.6); } }
+  .node.nullify-core { animation: shimmer 3s ease-in-out infinite; }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <div class="logo">Nullify AI</div>
+  <h1>System <span>Architecture</span></h1>
+  <div class="tagline">Pre-action enforcement · Real-time interception</div>
+  <div class="latency-badge">Total enforcement latency &lt; 10ms</div>
+</div>
+
+<div class="arch-canvas">
+
+  <!-- COLUMNS GRID -->
+  <div class="columns">
+
+    <!-- ── COL 1: Agents ── -->
+    <div id="col-agents">
+      <div class="col-header agents">AI Agents</div>
+
+      <div class="node agent" id="n-hc">
+        <div class="node-icon">🏥</div>
+        <div class="node-label">Healthcare Agent</div>
+        <div class="node-sub">Prior auth · Claims · Scheduling</div>
+      </div>
+
+      <div class="node agent" id="n-loan">
+        <div class="node-icon">💳</div>
+        <div class="node-label">Loan Agent</div>
+        <div class="node-sub">Approval · Risk scoring · DTI calc</div>
+      </div>
+
+      <div class="node agent" id="n-fraud">
+        <div class="node-icon">🔍</div>
+        <div class="node-label">Fraud Agent</div>
+        <div class="node-sub">Wire transfer · Anomaly detection</div>
+      </div>
+
+      <div class="node agent" id="n-ops">
+        <div class="node-icon">⚙️</div>
+        <div class="node-label">Ops Agent</div>
+        <div class="node-sub">File access · DB writes · Deploys</div>
+      </div>
+    </div>
+
+    <!-- ── ARROW 1 ── -->
+    <div class="arrow-col" id="arrow1">
+      <svg class="arrow-svg" height="380" viewBox="0 0 40 380" id="svg1">
+        <!-- dashed pipe -->
+        <line x1="20" y1="30" x2="20" y2="340" stroke="#3b82f6" stroke-width="1.5" class="pipe" opacity="0.5"/>
+        <!-- arrowhead -->
+        <polygon points="12,338 20,355 28,338" fill="#3b82f6" opacity="0.8"/>
+        <!-- packets (circles riding along path) -->
+        <circle id="p1a" r="4" fill="#60a5fa" opacity="0"/>
+        <circle id="p1b" r="4" fill="#60a5fa" opacity="0"/>
+        <circle id="p1c" r="4" fill="#60a5fa" opacity="0"/>
+        <circle id="p1d" r="4" fill="#60a5fa" opacity="0"/>
+      </svg>
+      <div style="font-size:9px;color:#3b82f6;text-align:center;margin-top:-10px;letter-spacing:1px;opacity:0.7;">API CALLS</div>
+    </div>
+
+    <!-- ── COL 2: Nullify ── -->
+    <div id="col-nullify">
+      <div class="col-header nullify">Nullify Enforcement</div>
+      <div class="intercept-banner">⚡ ALL CALLS INTERCEPTED BEFORE EXECUTION</div>
+
+      <div class="node nullify-comp" id="n-intercept">
+        <div class="node-icon">🛡</div>
+        <div class="node-label">Intercept Layer</div>
+        <div class="node-sub">SDK / Proxy · Wraps every agent API call · 1ms</div>
+      </div>
+
+      <div class="node nullify-comp" id="n-rules">
+        <div class="node-icon">📋</div>
+        <div class="node-label">Policy Engine</div>
+        <div class="node-sub">Rule eval · Condition matching · 4ms</div>
+      </div>
+
+      <div class="node nullify-core" id="n-core">
+        <div class="node-icon">🧠</div>
+        <div class="node-label" style="color:#c4b5fd;font-size:13px;">Decision Core</div>
+        <div class="node-sub">Context fusion · Threshold eval · Verdict generation</div>
+        <div class="latency-strip" style="margin-top:8px;">
+          <div class="lat-seg l1">Intercept<br>1ms</div>
+          <div class="lat-seg l2">Rules<br>4ms</div>
+          <div class="lat-seg l3">ML<br>3ms</div>
+          <div class="lat-seg l4">Verdict<br>2ms</div>
+          <div class="lat-total">~10ms</div>
+        </div>
+      </div>
+
+      <div class="node nullify-comp" id="n-drift">
+        <div class="node-icon">📊</div>
+        <div class="node-label">Drift Detector</div>
+        <div class="node-sub">7-day rolling baseline · SPC model · 3ms</div>
+      </div>
+
+      <div class="node nullify-comp" id="n-audit">
+        <div class="node-icon">🗂</div>
+        <div class="node-label">Audit Logger</div>
+        <div class="node-sub">Immutable log · EU AI Act trace · SIEM export</div>
+      </div>
+    </div>
+
+    <!-- ── ARROW 2 ── -->
+    <div class="arrow-col" id="arrow2">
+      <svg class="arrow-svg" height="380" viewBox="0 0 40 380" id="svg2">
+        <line x1="20" y1="30" x2="20" y2="340" stroke="#7c3aed" stroke-width="1.5" class="pipe" opacity="0.5"/>
+        <polygon points="12,338 20,355 28,338" fill="#7c3aed" opacity="0.8"/>
+        <circle id="p2a" r="4" fill="#a78bfa" opacity="0"/>
+        <circle id="p2b" r="4" fill="#a78bfa" opacity="0"/>
+      </svg>
+      <div style="font-size:9px;color:#7c3aed;text-align:center;margin-top:-10px;letter-spacing:1px;opacity:0.7;">VERDICT</div>
+    </div>
+
+    <!-- ── COL 3: Verdicts ── -->
+    <div id="col-verdicts">
+      <div class="col-header verdicts">Verdicts</div>
+
+      <div class="node verdict-approved" id="n-approved" style="margin-top:30px;">
+        <span class="verdict-pill approved">APPROVED</span>
+        <div class="node-icon">✅</div>
+        <div class="node-label">Proceed</div>
+        <div class="node-sub">Policy satisfied · Action executes</div>
+      </div>
+
+      <div class="node verdict-blocked" id="n-blocked" style="margin-top:16px;">
+        <span class="verdict-pill blocked">BLOCKED</span>
+        <div class="node-icon">🚫</div>
+        <div class="node-label">Halt</div>
+        <div class="node-sub">Rule violation · Action cancelled · Logged</div>
+      </div>
+
+      <div class="node verdict-escalate" id="n-escalate" style="margin-top:16px;">
+        <span class="verdict-pill escalate">ESCALATE</span>
+        <div class="node-icon">🔔</div>
+        <div class="node-label">Human Review</div>
+        <div class="node-sub">High-risk edge case · Human-in-loop</div>
+      </div>
+    </div>
+
+    <!-- ── ARROW 3 ── -->
+    <div class="arrow-col" id="arrow3">
+      <svg class="arrow-svg" height="380" viewBox="0 0 40 380" id="svg3">
+        <!-- approved line (green) -->
+        <line x1="20" y1="80" x2="20" y2="160" stroke="#10b981" stroke-width="1.5" class="pipe" opacity="0.5"/>
+        <polygon points="12,158 20,175 28,158" fill="#10b981" opacity="0.8"/>
+        <!-- blocked stops -->
+        <line x1="8" y1="215" x2="32" y2="215" stroke="#ef4444" stroke-width="2" opacity="0.8"/>
+        <line x1="8" y1="222" x2="32" y2="222" stroke="#ef4444" stroke-width="2" opacity="0.8"/>
+        <!-- escalate line (amber) -->
+        <line x1="20" y1="270" x2="20" y2="320" stroke="#f59e0b" stroke-width="1.5" class="pipe" opacity="0.5"/>
+        <polygon points="12,318 20,335 28,318" fill="#f59e0b" opacity="0.8"/>
+        <circle id="p3a" r="4" fill="#34d399" opacity="0"/>
+        <circle id="p3b" r="4" fill="#fbbf24" opacity="0"/>
+      </svg>
+      <div style="font-size:9px;color:#10b981;text-align:center;margin-top:-10px;letter-spacing:1px;opacity:0.7;">EXECUTE</div>
+    </div>
+
+    <!-- ── COL 4: Systems ── -->
+    <div id="col-systems">
+      <div class="col-header systems">Real-World Systems</div>
+
+      <div class="node system" id="n-ehr">
+        <div class="node-icon">🏥</div>
+        <div class="node-label">EHR / Claims</div>
+        <div class="node-sub">Epic · Cerner · CMS portals</div>
+      </div>
+
+      <div class="node system" id="n-banking">
+        <div class="node-icon">🏦</div>
+        <div class="node-label">Banking Core</div>
+        <div class="node-sub">Loan origination · Wire systems</div>
+      </div>
+
+      <div class="node system" id="n-notify">
+        <div class="node-icon">📣</div>
+        <div class="node-label">Alert System</div>
+        <div class="node-sub">PagerDuty · Slack · Email</div>
+      </div>
+
+      <div class="node system" id="n-siem">
+        <div class="node-icon">🔐</div>
+        <div class="node-label">SIEM / Compliance</div>
+        <div class="node-sub">Splunk · Datadog · Audit trail</div>
+      </div>
+    </div>
+
+  </div><!-- /columns -->
+
+  <!-- STEP INDICATOR -->
+  <div class="step-indicator" id="steps">
+    <div class="step" id="s1"><div class="step-num">1</div><span>Agent fires API call</span></div>
+    <div class="step" id="s2"><div class="step-num">2</div><span>Nullify intercepts</span></div>
+    <div class="step" id="s3"><div class="step-num">3</div><span>Policy evaluated</span></div>
+    <div class="step" id="s4"><div class="step-num">4</div><span>Verdict issued</span></div>
+    <div class="step" id="s5"><div class="step-num">5</div><span>System acts (or halts)</span></div>
+  </div>
+
+  <!-- SCENARIO BAR -->
+  <div class="scenario-bar">
+    <button class="scn-btn green"  onclick="runScenario('approved')">▶ Approved Flow</button>
+    <button class="scn-btn red"    onclick="runScenario('blocked')">▶ Blocked Flow</button>
+    <button class="scn-btn amber"  onclick="runScenario('escalate')">▶ Escalate Flow</button>
+    <button class="scn-btn purple" onclick="runScenario('drift')">▶ Drift Detection</button>
+    <button class="scn-btn" style="border-color:#475569;color:#94a3b8;" onclick="resetAll()">↺ Reset</button>
+  </div>
+
+</div><!-- /arch-canvas -->
+
+<script>
+// ── Packet animation engine ──
+const PIPE_Y_START = 30, PIPE_Y_END = 350;
+
+function animPacket(circleId, color, svgId, delay, duration, loop) {
+  const el = document.getElementById(circleId);
+  if (!el) return;
+  let start = null, running = true;
+
+  function step(ts) {
+    if (!start) start = ts + delay * 1000;
+    const elapsed = ts - start;
+    if (elapsed < 0) { requestAnimationFrame(step); return; }
+
+    const t = (elapsed % (duration * 1000)) / (duration * 1000);
+    const y = PIPE_Y_START + t * (PIPE_Y_END - PIPE_Y_START);
+    const opacity = t < 0.1 ? t / 0.1 : t > 0.85 ? (1 - t) / 0.15 : 1;
+
+    el.setAttribute('cy', y);
+    el.setAttribute('cx', 20);
+    el.setAttribute('fill', color);
+    el.setAttribute('opacity', opacity * 0.9);
+
+    if (running && loop) requestAnimationFrame(step);
+    else if (!loop && t >= 0.95) el.setAttribute('opacity', 0);
+  }
+  requestAnimationFrame(step);
+  return () => { running = false; el.setAttribute('opacity', 0); };
+}
+
+// ── Node state helpers ──
+function activate(id, duration = 600) {
+  const el = document.getElementById(id);
+  if (!el) return;
+  el.classList.add('active');
+  if (duration > 0) setTimeout(() => el.classList.remove('active'), duration);
+}
+
+function setStep(num) {
+  for (let i = 1; i <= 5; i++) {
+    const s = document.getElementById('s' + i);
+    s.className = 'step' + (i < num ? ' done' : i === num ? ' active' : '');
+  }
+}
+
+function resetAll() {
+  ['n-hc','n-loan','n-fraud','n-ops',
+   'n-intercept','n-rules','n-core','n-drift','n-audit',
+   'n-approved','n-blocked','n-escalate',
+   'n-ehr','n-banking','n-notify','n-siem'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.classList.remove('active', 'verdict-pop');
+  });
+  for (let i = 1; i <= 5; i++) {
+    document.getElementById('s' + i).className = 'step';
+  }
+  stoppers.forEach(fn => fn && fn());
+  stoppers = [];
+  activeScenario = null;
+  document.querySelectorAll('.scn-btn').forEach(b => b.classList.remove('active-btn'));
+}
+
+let stoppers = [];
+let activeScenario = null;
+
+function runScenario(type) {
+  resetAll();
+  activeScenario = type;
+
+  // Mark active button
+  const btnMap = { approved: 0, blocked: 1, escalate: 2, drift: 3 };
+  const btns = document.querySelectorAll('.scn-btn');
+  if (btnMap[type] !== undefined) btns[btnMap[type]].classList.add('active-btn');
+
+  const T = (ms, fn) => setTimeout(fn, ms);
+
+  if (type === 'approved') {
+    // Step 1: agent fires
+    setStep(1);
+    activate('n-loan', 1200);
+    stoppers.push(animPacket('p1b', '#60a5fa', 'svg1', 0, 1.0, false));
+
+    T(900, () => {
+      // Step 2: intercept
+      setStep(2);
+      activate('n-intercept', 1000);
+      stoppers.push(animPacket('p1a', '#60a5fa', 'svg1', 0, 1.0, true));
+    });
+
+    T(1800, () => {
+      // Step 3: policy
+      setStep(3);
+      activate('n-rules', 1000);
+      activate('n-core', 1200);
+    });
+
+    T(2800, () => {
+      // Step 4: verdict
+      setStep(4);
+      activate('n-approved', 0);
+      document.getElementById('n-approved').classList.add('verdict-pop');
+      stoppers.push(animPacket('p2a', '#a78bfa', 'svg2', 0, 0.8, false));
+    });
+
+    T(3500, () => {
+      // Step 5: execute
+      setStep(5);
+      stoppers.push(animPacket('p3a', '#34d399', 'svg3', 0, 0.8, false));
+      activate('n-banking', 0);
+      activate('n-audit', 0);
+    });
+
+    // Loop packets
+    T(4000, () => {
+      stoppers.push(animPacket('p1a', '#60a5fa', 'svg1', 0, 1.2, true));
+      stoppers.push(animPacket('p1c', '#60a5fa', 'svg1', 0.4, 1.2, true));
+      stoppers.push(animPacket('p2a', '#a78bfa', 'svg2', 0.2, 1.2, true));
+      stoppers.push(animPacket('p3a', '#34d399', 'svg3', 0.5, 1.2, true));
+    });
+  }
+
+  else if (type === 'blocked') {
+    setStep(1);
+    activate('n-fraud', 1200);
+    stoppers.push(animPacket('p1c', '#60a5fa', 'svg1', 0, 1.0, false));
+
+    T(900, () => {
+      setStep(2);
+      activate('n-intercept', 900);
+    });
+
+    T(1700, () => {
+      setStep(3);
+      activate('n-rules', 1000);
+      activate('n-core', 1200);
+    });
+
+    T(2700, () => {
+      setStep(4);
+      activate('n-blocked', 0);
+      document.getElementById('n-blocked').classList.add('verdict-pop');
+      activate('n-audit', 0);
+    });
+
+    T(3200, () => {
+      setStep(5);
+      activate('n-notify', 0);
+    });
+
+    // Loop: keep packets flowing into Nullify but not out
+    T(3800, () => {
+      stoppers.push(animPacket('p1a', '#60a5fa', 'svg1', 0, 1.4, true));
+      stoppers.push(animPacket('p1c', '#ef4444', 'svg1', 0.7, 1.4, true));
+      stoppers.push(animPacket('p2a', '#f87171', 'svg2', 0.2, 1.4, true));
+    });
+  }
+
+  else if (type === 'escalate') {
+    setStep(1);
+    activate('n-hc', 1200);
+    stoppers.push(animPacket('p1d', '#60a5fa', 'svg1', 0, 1.0, false));
+
+    T(900, () => {
+      setStep(2);
+      activate('n-intercept', 900);
+    });
+
+    T(1700, () => {
+      setStep(3);
+      activate('n-rules', 1000);
+      activate('n-core', 1200);
+    });
+
+    T(2800, () => {
+      setStep(4);
+      activate('n-escalate', 0);
+      document.getElementById('n-escalate').classList.add('verdict-pop');
+    });
+
+    T(3400, () => {
+      setStep(5);
+      activate('n-notify', 0);
+      activate('n-siem', 0);
+      stoppers.push(animPacket('p3b', '#fbbf24', 'svg3', 0, 1.0, false));
+    });
+
+    T(4000, () => {
+      stoppers.push(animPacket('p1a', '#60a5fa', 'svg1', 0, 1.2, true));
+      stoppers.push(animPacket('p2b', '#a78bfa', 'svg2', 0.3, 1.2, true));
+      stoppers.push(animPacket('p3b', '#fbbf24', 'svg3', 0.6, 1.2, true));
+    });
+  }
+
+  else if (type === 'drift') {
+    setStep(1);
+    // Simulate multiple agents with drift
+    ['n-hc','n-loan','n-fraud','n-ops'].forEach((id, i) => {
+      T(i * 300, () => activate(id, 2000));
+    });
+
+    T(1200, () => {
+      setStep(2);
+      activate('n-intercept', 1200);
+      stoppers.push(animPacket('p1a', '#60a5fa', 'svg1', 0, 0.8, true));
+      stoppers.push(animPacket('p1c', '#60a5fa', 'svg1', 0.4, 0.8, true));
+    });
+
+    T(2200, () => {
+      setStep(3);
+      activate('n-drift', 0);
+      activate('n-rules', 1500);
+    });
+
+    T(3200, () => {
+      activate('n-core', 0);
+    });
+
+    T(3800, () => {
+      setStep(4);
+      // Mixed verdicts — some approved, some blocked
+      activate('n-approved', 0);
+      activate('n-blocked', 0);
+      stoppers.push(animPacket('p2a', '#a78bfa', 'svg2', 0, 1.0, true));
+      stoppers.push(animPacket('p2b', '#f87171', 'svg2', 0.5, 1.0, true));
+    });
+
+    T(4500, () => {
+      setStep(5);
+      activate('n-audit', 0);
+      activate('n-siem', 0);
+      activate('n-notify', 0);
+    });
+  }
+}
+
+// Auto-play on load with staggered intro
+setTimeout(() => runScenario('approved'), 1200);
+</script>
+</body>
+</html>

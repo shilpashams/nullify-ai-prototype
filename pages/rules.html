@@ -1,0 +1,968 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+<title>Nullify AI — Rules Library & Alert Config</title>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --dark:#0A0E1A;--mid:#111827;--card:#141C2E;--border:#1F2937;--border2:#374151;
+  --accent:#6C63FF;--glow:#4F46E5;--teal:#14B8A6;--red:#EF4444;--yellow:#F59E0B;--green:#22C55E;
+  --text:#F9FAFB;--muted:#9CA3AF;--dim:#6B7280;
+}
+html,body{height:100%;font-family:'Inter',system-ui,sans-serif;background:var(--dark);color:var(--text);font-size:14px;line-height:1.5;-webkit-font-smoothing:antialiased}
+a{color:inherit;text-decoration:none}
+input,select,textarea,button{font-family:inherit;font-size:inherit}
+
+/* ── LAYOUT ── */
+.shell{display:flex;flex-direction:column;height:100vh}
+
+/* ── TOPBAR ── */
+.topbar{display:flex;align-items:center;justify-content:space-between;padding:0 28px;height:56px;background:var(--mid);border-bottom:1px solid var(--border);flex-shrink:0}
+.logo{display:flex;align-items:center;gap:8px;font-weight:800;font-size:16px;letter-spacing:-.03em}
+.logo-dot{width:8px;height:8px;border-radius:50%;background:var(--accent)}
+.topbar-right{display:flex;align-items:center;gap:10px}
+.btn{display:inline-flex;align-items:center;gap:6px;padding:8px 16px;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;border:none;transition:all .15s;white-space:nowrap}
+.btn-primary{background:var(--accent);color:#fff}.btn-primary:hover{background:var(--glow);transform:translateY(-1px)}
+.btn-ghost{background:transparent;color:var(--muted);border:1px solid var(--border2)}.btn-ghost:hover{color:var(--text);border-color:var(--accent)}
+.btn-sm{padding:5px 12px;font-size:12px;border-radius:6px}
+.btn-danger{background:rgba(239,68,68,.12);color:var(--red);border:1px solid rgba(239,68,68,.25)}.btn-danger:hover{background:rgba(239,68,68,.2)}
+.btn-success{background:rgba(20,184,166,.12);color:var(--teal);border:1px solid rgba(20,184,166,.25)}.btn-success:hover{background:rgba(20,184,166,.2)}
+.btn-icon{padding:7px;border-radius:7px;background:transparent;color:var(--dim);border:1px solid var(--border)}.btn-icon:hover{color:var(--text);border-color:var(--border2)}
+
+/* ── TABS ── */
+.tabs{display:flex;border-bottom:1px solid var(--border);background:var(--mid);flex-shrink:0;padding:0 28px}
+.tab{display:flex;align-items:center;gap:8px;padding:14px 20px;font-size:13px;font-weight:600;color:var(--muted);cursor:pointer;border-bottom:2px solid transparent;margin-bottom:-1px;transition:all .15s;white-space:nowrap}
+.tab:hover{color:var(--text)}
+.tab.active{color:var(--accent);border-bottom-color:var(--accent)}
+.tab .tab-count{background:var(--card);border:1px solid var(--border);border-radius:100px;padding:1px 7px;font-size:11px}
+.tab.active .tab-count{background:rgba(108,99,255,.15);border-color:rgba(108,99,255,.3);color:var(--accent)}
+
+/* ── CONTENT ── */
+.content{flex:1;overflow:hidden;display:flex}
+.page{display:none;flex:1;overflow-y:auto;flex-direction:column}
+.page.active{display:flex}
+.inner{padding:24px 28px;flex:1}
+
+/* ── TOOLBAR ── */
+.toolbar{display:flex;align-items:center;gap:12px;margin-bottom:20px;flex-wrap:wrap}
+.search-wrap{position:relative;flex:1;min-width:200px;max-width:340px}
+.search-wrap .ico{position:absolute;left:10px;top:50%;transform:translateY(-50%);color:var(--dim);pointer-events:none;font-size:14px}
+.search-input{width:100%;background:var(--card);border:1px solid var(--border);border-radius:8px;padding:8px 12px 8px 34px;color:var(--text);font-size:13px;outline:none;transition:border-color .15s}
+.search-input:focus{border-color:var(--accent)}
+.search-input::placeholder{color:var(--dim)}
+.select{background:var(--card);border:1px solid var(--border);border-radius:8px;padding:8px 12px;color:var(--text);font-size:13px;outline:none;cursor:pointer}
+.select:focus{border-color:var(--accent)}
+.chip-group{display:flex;gap:6px;flex-wrap:wrap}
+.chip{padding:5px 12px;border-radius:100px;font-size:12px;font-weight:500;cursor:pointer;border:1px solid var(--border2);color:var(--muted);background:transparent;transition:all .15s}
+.chip:hover,.chip.active{color:var(--accent);border-color:var(--accent);background:rgba(108,99,255,.08)}
+.chip.c-ins.active{color:#A78BFA;border-color:#A78BFA;background:rgba(167,139,250,.08)}
+.chip.c-fin.active{color:var(--teal);border-color:var(--teal);background:rgba(20,184,166,.08)}
+.chip.c-hc.active{color:#F472B6;border-color:#F472B6;background:rgba(244,114,182,.08)}
+.chip.c-fr.active{color:var(--yellow);border-color:var(--yellow);background:rgba(245,158,11,.08)}
+
+/* ── RULES TABLE ── */
+.rules-table{background:var(--card);border:1px solid var(--border);border-radius:14px;overflow:hidden}
+.rt-head{display:grid;grid-template-columns:120px 1fr 90px 100px 110px 90px 130px;padding:10px 16px;border-bottom:1px solid var(--border);font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:var(--dim)}
+.rule-row{display:grid;grid-template-columns:120px 1fr 90px 100px 110px 90px 130px;padding:14px 16px;border-bottom:1px solid var(--border);align-items:center;transition:background .12s;cursor:pointer}
+.rule-row:last-child{border-bottom:none}
+.rule-row:hover{background:rgba(108,99,255,.04)}
+.rule-row.expanded{background:rgba(108,99,255,.04)}
+
+.rule-code{font-size:11px;font-weight:700;letter-spacing:.06em;font-family:'SF Mono','Fira Code',monospace}
+.code-ins{color:#A78BFA}.code-fin{color:var(--teal)}.code-hc{color:#F472B6}.code-fr{color:var(--yellow)}.code-sys{color:var(--accent)}
+
+.rule-name-wrap .name{font-size:13px;font-weight:600;margin-bottom:2px}
+.rule-name-wrap .sub{font-size:11px;color:var(--dim)}
+
+.sev-badge{display:inline-flex;align-items:center;gap:4px;padding:3px 9px;border-radius:100px;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.05em}
+.sev-critical{background:rgba(239,68,68,.12);color:var(--red);border:1px solid rgba(239,68,68,.2)}
+.sev-high{background:rgba(245,158,11,.12);color:var(--yellow);border:1px solid rgba(245,158,11,.2)}
+.sev-medium{background:rgba(108,99,255,.12);color:var(--accent);border:1px solid rgba(108,99,255,.2)}
+.sev-low{background:rgba(20,184,166,.12);color:var(--teal);border:1px solid rgba(20,184,166,.2)}
+
+.agent-tags{display:flex;gap:4px;flex-wrap:wrap}
+.agent-tag{font-size:10px;background:var(--dark);border:1px solid var(--border2);border-radius:4px;padding:2px 6px;color:var(--muted)}
+
+.toggle-wrap{display:flex;align-items:center;gap:8px}
+.toggle{position:relative;width:36px;height:20px;cursor:pointer}
+.toggle input{opacity:0;width:0;height:0;position:absolute}
+.toggle-track{position:absolute;inset:0;border-radius:10px;background:var(--border2);transition:background .2s}
+.toggle input:checked ~ .toggle-track{background:var(--teal)}
+.toggle-thumb{position:absolute;top:2px;left:2px;width:16px;height:16px;border-radius:50%;background:#fff;transition:transform .2s;box-shadow:0 1px 3px rgba(0,0,0,.3)}
+.toggle input:checked ~ .toggle-thumb{transform:translateX(16px)}
+.toggle-label{font-size:12px;font-weight:500}
+
+.violations-num{font-size:13px;font-weight:700}
+.v-high{color:var(--red)}.v-med{color:var(--yellow)}.v-low{color:var(--teal)}.v-zero{color:var(--dim)}
+
+/* ── RULE EXPAND PANEL ── */
+.rule-expand{display:none;background:var(--dark);border-top:1px solid var(--border);padding:20px 24px;grid-column:1/-1}
+.rule-row.expanded + .rule-expand-row .rule-expand{display:grid;grid-template-columns:1fr 1fr 1fr;gap:24px}
+.rule-expand-row{display:contents}
+.expand-section h4{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:var(--dim);margin-bottom:12px}
+.threshold-row{display:flex;align-items:center;justify-content:space-between;padding:8px 0;border-bottom:1px solid var(--border);font-size:13px}
+.threshold-row:last-child{border-bottom:none}
+.threshold-row .lbl{color:var(--muted)}
+.threshold-input{background:var(--card);border:1px solid var(--border2);border-radius:6px;padding:4px 10px;color:var(--text);width:100px;text-align:right;outline:none;font-size:13px}
+.threshold-input:focus{border-color:var(--accent)}
+.action-row{display:flex;flex-direction:column;gap:8px}
+.action-item{display:flex;align-items:center;gap:10px;padding:9px 12px;background:var(--card);border:1px solid var(--border);border-radius:8px;font-size:13px}
+.action-item .a-icon{font-size:15px}
+.action-item .a-lbl{flex:1;font-weight:500}
+.action-item .a-val{font-size:12px;color:var(--dim)}
+.violation-log{display:flex;flex-direction:column;gap:6px;max-height:160px;overflow-y:auto}
+.vlog-item{background:rgba(239,68,68,.05);border:1px solid rgba(239,68,68,.12);border-radius:7px;padding:8px 10px}
+.vlog-item .vc{font-size:10px;font-weight:700;color:var(--red);text-transform:uppercase;letter-spacing:.07em}
+.vlog-item .vd{font-size:12px;color:var(--muted);margin-top:2px}
+.vlog-item .vt{font-size:11px;color:var(--dim);margin-top:2px}
+
+/* ── STATS BANNER ── */
+.stats-banner{display:grid;grid-template-columns:repeat(4,1fr);gap:1px;background:var(--border);border:1px solid var(--border);border-radius:12px;overflow:hidden;margin-bottom:20px}
+.sb-cell{background:var(--card);padding:16px 20px}
+.sb-num{font-size:28px;font-weight:800;line-height:1}
+.sb-lbl{font-size:11px;color:var(--dim);margin-top:4px;text-transform:uppercase;letter-spacing:.06em}
+
+/* ── SECTION HEADER ── */
+.section-hd{display:flex;align-items:center;justify-content:space-between;margin-bottom:14px}
+.section-hd h2{font-size:15px;font-weight:700}
+
+/* ══════════════════════════════════════════
+   ALERT CONFIG PAGE
+══════════════════════════════════════════ */
+.alert-layout{display:grid;grid-template-columns:1fr 1fr;gap:20px;padding:24px 28px}
+.alert-col{display:flex;flex-direction:column;gap:20px}
+
+.config-card{background:var(--card);border:1px solid var(--border);border-radius:14px;overflow:hidden}
+.cc-head{display:flex;align-items:center;justify-content:space-between;padding:16px 20px;border-bottom:1px solid var(--border)}
+.cc-head-left{display:flex;align-items:center;gap:10px}
+.cc-head-icon{font-size:18px}
+.cc-head h3{font-size:14px;font-weight:700}
+.cc-head p{font-size:12px;color:var(--dim);margin-top:1px}
+.cc-body{padding:16px 20px}
+
+/* channel cards */
+.channel-list{display:flex;flex-direction:column;gap:10px}
+.channel-card{background:var(--dark);border:1px solid var(--border);border-radius:10px;padding:14px 16px;display:flex;align-items:center;gap:14px;transition:border-color .15s}
+.channel-card:hover{border-color:var(--border2)}
+.channel-card.connected{border-color:rgba(20,184,166,.3)}
+.ch-icon{font-size:22px;width:40px;height:40px;border-radius:10px;background:var(--card);display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.ch-info{flex:1}
+.ch-name{font-size:13px;font-weight:600}
+.ch-detail{font-size:12px;color:var(--dim);margin-top:2px}
+.ch-status{font-size:11px;font-weight:700;padding:3px 9px;border-radius:100px}
+.ch-connected{background:rgba(20,184,166,.12);color:var(--teal);border:1px solid rgba(20,184,166,.25)}
+.ch-disconnected{background:var(--card);color:var(--dim);border:1px solid var(--border)}
+
+/* threshold sliders */
+.threshold-grid{display:flex;flex-direction:column;gap:16px}
+.thr-item{}
+.thr-head{display:flex;justify-content:space-between;align-items:baseline;margin-bottom:6px}
+.thr-lbl{font-size:13px;font-weight:600}
+.thr-val{font-size:18px;font-weight:800;color:var(--accent)}
+.thr-unit{font-size:12px;color:var(--dim);font-weight:400;margin-left:2px}
+.thr-desc{font-size:11px;color:var(--dim);margin-top:3px}
+.slider{width:100%;appearance:none;height:5px;border-radius:3px;background:var(--border2);outline:none;cursor:pointer}
+.slider::-webkit-slider-thumb{appearance:none;width:16px;height:16px;border-radius:50%;background:var(--accent);cursor:pointer;box-shadow:0 0 0 3px rgba(108,99,255,.2);transition:box-shadow .15s}
+.slider::-webkit-slider-thumb:hover{box-shadow:0 0 0 5px rgba(108,99,255,.3)}
+
+/* escalation matrix */
+.esc-matrix{display:flex;flex-direction:column;gap:0;border-radius:10px;overflow:hidden;border:1px solid var(--border)}
+.esc-row{display:grid;grid-template-columns:100px 1fr 1fr 1fr;font-size:12px}
+.esc-row.esc-head{background:var(--dark);border-bottom:1px solid var(--border);font-weight:700;color:var(--dim);text-transform:uppercase;letter-spacing:.06em}
+.esc-cell{padding:10px 12px;border-right:1px solid var(--border)}
+.esc-cell:last-child{border-right:none}
+.esc-row:not(.esc-head){border-top:1px solid var(--border)}
+.esc-level{font-weight:700}
+.esc-l1{color:var(--yellow)}.esc-l2{color:var(--red)}.esc-l3{color:#A78BFA}
+.esc-channel{display:flex;align-items:center;gap:6px;font-size:12px;color:var(--muted)}
+.esc-dot{width:6px;height:6px;border-radius:50%;flex-shrink:0}
+
+/* agent thresholds table */
+.agent-thr-table{display:flex;flex-direction:column;gap:0;border-radius:10px;overflow:hidden;border:1px solid var(--border)}
+.at-head-row{display:grid;grid-template-columns:1fr 80px 80px 80px 90px;padding:9px 14px;background:var(--dark);border-bottom:1px solid var(--border);font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:var(--dim)}
+.at-row{display:grid;grid-template-columns:1fr 80px 80px 80px 90px;padding:11px 14px;border-top:1px solid var(--border);align-items:center;font-size:13px;transition:background .12s}
+.at-row:hover{background:rgba(108,99,255,.03)}
+.at-agent{display:flex;align-items:center;gap:8px}
+.at-ico{font-size:15px}
+.at-mini-input{background:var(--dark);border:1px solid var(--border);border-radius:6px;padding:4px 8px;color:var(--text);width:68px;text-align:center;outline:none;font-size:12px}
+.at-mini-input:focus{border-color:var(--accent)}
+
+/* alert history */
+.alert-history{display:flex;flex-direction:column;gap:8px;max-height:320px;overflow-y:auto}
+.alert-item{display:flex;gap:12px;align-items:flex-start;padding:12px 14px;background:var(--dark);border:1px solid var(--border);border-radius:10px}
+.alert-item.a-critical{border-left:3px solid var(--red)}
+.alert-item.a-warning{border-left:3px solid var(--yellow)}
+.alert-item.a-info{border-left:3px solid var(--accent)}
+.alert-ico{font-size:16px;flex-shrink:0;margin-top:1px}
+.alert-body{flex:1}
+.alert-title{font-size:13px;font-weight:600;margin-bottom:2px}
+.alert-detail{font-size:12px;color:var(--muted)}
+.alert-meta{font-size:11px;color:var(--dim);margin-top:4px;display:flex;gap:10px}
+.alert-ack{font-size:11px;font-weight:600;padding:3px 9px;border-radius:100px;cursor:pointer;border:1px solid var(--border2);color:var(--dim);background:none;transition:all .15s;flex-shrink:0;align-self:center}
+.alert-ack:hover{color:var(--teal);border-color:var(--teal)}
+.alert-ack.acked{color:var(--teal);border-color:rgba(20,184,166,.3);background:rgba(20,184,166,.08);cursor:default}
+
+/* toast */
+.toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%) translateY(100px);background:var(--mid);border:1px solid var(--teal);border-radius:12px;padding:13px 20px;display:flex;align-items:center;gap:10px;font-size:13px;z-index:200;transition:transform .35s cubic-bezier(.34,1.56,.64,1);box-shadow:0 8px 30px rgba(0,0,0,.4)}
+.toast.show{transform:translateX(-50%) translateY(0)}
+
+/* modal */
+.modal-bg{position:fixed;inset:0;background:rgba(0,0,0,.7);z-index:100;display:none;align-items:center;justify-content:center}
+.modal-bg.open{display:flex}
+.modal{background:var(--mid);border:1px solid var(--border2);border-radius:16px;padding:28px;max-width:480px;width:100%;box-shadow:0 24px 60px rgba(0,0,0,.5)}
+.modal h3{font-size:17px;font-weight:800;margin-bottom:6px}
+.modal p{font-size:13px;color:var(--muted);margin-bottom:18px;line-height:1.6}
+.form-row{margin-bottom:14px}
+.form-label{font-size:12px;font-weight:600;color:var(--muted);margin-bottom:5px;display:block}
+.form-input{width:100%;background:var(--card);border:1px solid var(--border2);border-radius:8px;padding:9px 12px;color:var(--text);outline:none;font-size:13px}
+.form-input:focus{border-color:var(--accent)}
+.form-select{width:100%;background:var(--card);border:1px solid var(--border2);border-radius:8px;padding:9px 12px;color:var(--text);outline:none;font-size:13px;cursor:pointer}
+.modal-actions{display:flex;gap:10px;margin-top:20px}
+
+/* scrollbar */
+::-webkit-scrollbar{width:4px;height:4px}
+::-webkit-scrollbar-track{background:transparent}
+::-webkit-scrollbar-thumb{background:var(--border2);border-radius:2px}
+</style>
+</head>
+<body>
+<div class="shell">
+
+<!-- TOPBAR -->
+<div class="topbar">
+  <div class="logo"><span class="logo-dot"></span>Nullify AI</div>
+  <div class="topbar-right">
+    <button class="btn btn-ghost btn-sm" onclick="openNewRule()">+ New Rule</button>
+    <button class="btn btn-primary btn-sm" onclick="saveAll()">💾 Save Changes</button>
+  </div>
+</div>
+
+<!-- TABS -->
+<div class="tabs">
+  <div class="tab active" onclick="switchTab('rules',this)">
+    📚 Rules Library <span class="tab-count" id="rule-count">18</span>
+  </div>
+  <div class="tab" onclick="switchTab('alerts',this)">
+    🔔 Alert Config <span class="tab-count" id="alert-count">7</span>
+  </div>
+</div>
+
+<!-- CONTENT -->
+<div class="content">
+
+  <!-- ═══════════════════════════════════════
+       RULES LIBRARY PAGE
+  ═══════════════════════════════════════ -->
+  <div class="page active" id="page-rules">
+  <div class="inner">
+
+    <!-- Stats -->
+    <div class="stats-banner">
+      <div class="sb-cell">
+        <div class="sb-num" style="color:var(--text)" id="stat-total">18</div>
+        <div class="sb-lbl">Total Rules</div>
+      </div>
+      <div class="sb-cell">
+        <div class="sb-num" style="color:var(--teal)" id="stat-active">16</div>
+        <div class="sb-lbl">Active</div>
+      </div>
+      <div class="sb-cell">
+        <div class="sb-num" style="color:var(--red)" id="stat-violations">97</div>
+        <div class="sb-lbl">Violations (24h)</div>
+      </div>
+      <div class="sb-cell">
+        <div class="sb-num" style="color:var(--yellow)" id="stat-triggered">5</div>
+        <div class="sb-lbl">Rules Triggered Today</div>
+      </div>
+    </div>
+
+    <!-- Toolbar -->
+    <div class="toolbar">
+      <div class="search-wrap">
+        <span class="ico">🔍</span>
+        <input class="search-input" placeholder="Search rules…" oninput="filterRules()" id="rule-search"/>
+      </div>
+      <select class="select" onchange="filterRules()" id="sev-filter">
+        <option value="">All Severities</option>
+        <option value="critical">Critical</option>
+        <option value="high">High</option>
+        <option value="medium">Medium</option>
+        <option value="low">Low</option>
+      </select>
+      <select class="select" onchange="filterRules()" id="status-filter">
+        <option value="">All Status</option>
+        <option value="active">Active</option>
+        <option value="inactive">Inactive</option>
+      </select>
+      <div class="chip-group">
+        <button class="chip active" data-vert="all"     onclick="setVert('all',this)">All</button>
+        <button class="chip c-ins"  data-vert="INS"     onclick="setVert('INS',this)">Insurance</button>
+        <button class="chip c-fin"  data-vert="LOAN"    onclick="setVert('LOAN',this)">Fintech</button>
+        <button class="chip c-hc"   data-vert="HC"      onclick="setVert('HC',this)">Healthcare</button>
+        <button class="chip c-fr"   data-vert="FRAUD"   onclick="setVert('FRAUD',this)">Fraud</button>
+        <button class="chip"        data-vert="SYS"     onclick="setVert('SYS',this)">System</button>
+      </div>
+    </div>
+
+    <!-- Table -->
+    <div class="rules-table" id="rules-table">
+      <div class="rt-head">
+        <div>Rule Code</div>
+        <div>Name & Description</div>
+        <div>Severity</div>
+        <div>Applies To</div>
+        <div>On Trigger</div>
+        <div>Violations</div>
+        <div>Status</div>
+      </div>
+      <div id="rules-body"></div>
+    </div>
+
+  </div>
+  </div><!-- /page-rules -->
+
+  <!-- ═══════════════════════════════════════
+       ALERT CONFIG PAGE
+  ═══════════════════════════════════════ -->
+  <div class="page" id="page-alerts">
+  <div class="alert-layout">
+
+    <!-- LEFT COLUMN -->
+    <div class="alert-col">
+
+      <!-- Notification Channels -->
+      <div class="config-card">
+        <div class="cc-head">
+          <div class="cc-head-left">
+            <span class="cc-head-icon">📡</span>
+            <div>
+              <h3>Notification Channels</h3>
+              <p>Where alerts are delivered</p>
+            </div>
+          </div>
+          <button class="btn btn-ghost btn-sm" onclick="openAddChannel()">+ Add</button>
+        </div>
+        <div class="cc-body">
+          <div class="channel-list">
+
+            <div class="channel-card connected">
+              <div class="ch-icon">💬</div>
+              <div class="ch-info">
+                <div class="ch-name">Slack</div>
+                <div class="ch-detail">#nullify-alerts · workspace: acme-corp</div>
+              </div>
+              <span class="ch-status ch-connected">● Connected</span>
+              <button class="btn-icon btn btn-sm" onclick="testChannel('Slack')">Test</button>
+            </div>
+
+            <div class="channel-card connected">
+              <div class="ch-icon">⚡</div>
+              <div class="ch-info">
+                <div class="ch-name">PagerDuty</div>
+                <div class="ch-detail">Service: AI-Compliance-Critical · Escalation P1</div>
+              </div>
+              <span class="ch-status ch-connected">● Connected</span>
+              <button class="btn-icon btn btn-sm" onclick="testChannel('PagerDuty')">Test</button>
+            </div>
+
+            <div class="channel-card connected">
+              <div class="ch-icon">📧</div>
+              <div class="ch-info">
+                <div class="ch-name">Email</div>
+                <div class="ch-detail">compliance@acme.com · cto@acme.com</div>
+              </div>
+              <span class="ch-status ch-connected">● Connected</span>
+              <button class="btn-icon btn btn-sm" onclick="testChannel('Email')">Test</button>
+            </div>
+
+            <div class="channel-card">
+              <div class="ch-icon">🔗</div>
+              <div class="ch-info">
+                <div class="ch-name">Webhook</div>
+                <div class="ch-detail">https://api.acme.com/nullify-events</div>
+              </div>
+              <span class="ch-status ch-connected">● Connected</span>
+              <button class="btn-icon btn btn-sm" onclick="testChannel('Webhook')">Test</button>
+            </div>
+
+            <div class="channel-card">
+              <div class="ch-icon">📟</div>
+              <div class="ch-info">
+                <div class="ch-name">SMS / Phone</div>
+                <div class="ch-detail">Not configured</div>
+              </div>
+              <span class="ch-status ch-disconnected">○ Not connected</span>
+              <button class="btn btn-ghost btn-sm" onclick="toast('SMS setup coming in v2.1')">Setup</button>
+            </div>
+
+          </div>
+        </div>
+      </div>
+
+      <!-- Global Thresholds -->
+      <div class="config-card">
+        <div class="cc-head">
+          <div class="cc-head-left">
+            <span class="cc-head-icon">⚖️</span>
+            <div>
+              <h3>Global Alert Thresholds</h3>
+              <p>Defaults applied to all agents unless overridden</p>
+            </div>
+          </div>
+        </div>
+        <div class="cc-body">
+          <div class="threshold-grid">
+
+            <div class="thr-item">
+              <div class="thr-head">
+                <span class="thr-lbl">Drift Score — Warning</span>
+                <span class="thr-val" id="drift-warn-val">40<span class="thr-unit">/ 100</span></span>
+              </div>
+              <input type="range" class="slider" min="10" max="90" value="40" oninput="updateSlider('drift-warn-val',this.value,'/ 100')"/>
+              <div class="thr-desc">Agent transitions to Warning status. Compliance team notified via Slack.</div>
+            </div>
+
+            <div class="thr-item">
+              <div class="thr-head">
+                <span class="thr-lbl">Drift Score — Critical</span>
+                <span class="thr-val" id="drift-crit-val">70<span class="thr-unit">/ 100</span></span>
+              </div>
+              <input type="range" class="slider" min="20" max="99" value="70" oninput="updateSlider('drift-crit-val',this.value,'/ 100')"/>
+              <div class="thr-desc">Agent transitions to Critical. PagerDuty P1 fires. Auto-block prompt shown.</div>
+            </div>
+
+            <div class="thr-item">
+              <div class="thr-head">
+                <span class="thr-lbl">Violations per 24h — Warning</span>
+                <span class="thr-val" id="viol-warn-val">10<span class="thr-unit">violations</span></span>
+              </div>
+              <input type="range" class="slider" min="1" max="50" value="10" oninput="updateSlider('viol-warn-val',this.value,'violations')"/>
+              <div class="thr-desc">Sustained violations trigger warning escalation regardless of drift score.</div>
+            </div>
+
+            <div class="thr-item">
+              <div class="thr-head">
+                <span class="thr-lbl">Violations per 24h — Critical</span>
+                <span class="thr-val" id="viol-crit-val">30<span class="thr-unit">violations</span></span>
+              </div>
+              <input type="range" class="slider" min="5" max="200" value="30" oninput="updateSlider('viol-crit-val',this.value,'violations')"/>
+              <div class="thr-desc">Critical escalation path fires. Suggested action: pause agent.</div>
+            </div>
+
+            <div class="thr-item">
+              <div class="thr-head">
+                <span class="thr-lbl">Block Rate Change — Alert</span>
+                <span class="thr-val" id="block-delta-val">50<span class="thr-unit">% change</span></span>
+              </div>
+              <input type="range" class="slider" min="10" max="99" value="50" oninput="updateSlider('block-delta-val',this.value,'% change')"/>
+              <div class="thr-desc">Alert fires when block rate shifts more than this % in either direction within 48h. Catches both "too many blocks" and FraudScanner-X type collapses.</div>
+            </div>
+
+          </div>
+        </div>
+      </div>
+
+    </div><!-- /left col -->
+
+    <!-- RIGHT COLUMN -->
+    <div class="alert-col">
+
+      <!-- Escalation Matrix -->
+      <div class="config-card">
+        <div class="cc-head">
+          <div class="cc-head-left">
+            <span class="cc-head-icon">📶</span>
+            <div>
+              <h3>Escalation Matrix</h3>
+              <p>Who gets notified, and when</p>
+            </div>
+          </div>
+        </div>
+        <div class="cc-body">
+          <div class="esc-matrix">
+            <div class="esc-row esc-head">
+              <div class="esc-cell">Level</div>
+              <div class="esc-cell">Trigger</div>
+              <div class="esc-cell">Notify</div>
+              <div class="esc-cell">Channel</div>
+            </div>
+            <div class="esc-row">
+              <div class="esc-cell esc-level esc-l1">L1 — Warning</div>
+              <div class="esc-cell" style="color:var(--muted)">Drift &gt; 40 or violations &gt; 10/day</div>
+              <div class="esc-cell" style="color:var(--muted)">Compliance analyst on shift</div>
+              <div class="esc-cell"><span class="esc-channel"><span class="esc-dot" style="background:#F59E0B"></span>Slack #nullify-alerts</span></div>
+            </div>
+            <div class="esc-row">
+              <div class="esc-cell esc-level esc-l2">L2 — Critical</div>
+              <div class="esc-cell" style="color:var(--muted)">Drift &gt; 70 or violations &gt; 30/day</div>
+              <div class="esc-cell" style="color:var(--muted)">Compliance lead + CTO</div>
+              <div class="esc-cell"><span class="esc-channel"><span class="esc-dot" style="background:#EF4444"></span>PagerDuty P1 + Email</span></div>
+            </div>
+            <div class="esc-row">
+              <div class="esc-cell esc-level esc-l3">L3 — Auto-Block</div>
+              <div class="esc-cell" style="color:var(--muted)">Drift &gt; 85 or block rate Δ &gt; 80%</div>
+              <div class="esc-cell" style="color:var(--muted)">CISO + Legal + Exec team</div>
+              <div class="esc-cell"><span class="esc-channel"><span class="esc-dot" style="background:#A78BFA"></span>All channels + SMS</span></div>
+            </div>
+            <div class="esc-row">
+              <div class="esc-cell esc-level" style="color:var(--dim)">L0 — Info</div>
+              <div class="esc-cell" style="color:var(--muted)">New rule triggered (first time)</div>
+              <div class="esc-cell" style="color:var(--muted)">Dashboard only</div>
+              <div class="esc-cell"><span class="esc-channel"><span class="esc-dot" style="background:var(--dim)"></span>Audit log only</span></div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Per-Agent Thresholds -->
+      <div class="config-card">
+        <div class="cc-head">
+          <div class="cc-head-left">
+            <span class="cc-head-icon">🤖</span>
+            <div>
+              <h3>Per-Agent Overrides</h3>
+              <p>Custom thresholds per agent (overrides global)</p>
+            </div>
+          </div>
+        </div>
+        <div class="cc-body" style="padding:0">
+          <div class="agent-thr-table">
+            <div class="at-head-row">
+              <div>Agent</div>
+              <div>Drift Warn</div>
+              <div>Drift Crit</div>
+              <div>Viols/day</div>
+              <div>Auto-Block</div>
+            </div>
+            <div class="at-row">
+              <div class="at-agent"><span class="at-ico">💳</span>LoanBot-Alpha</div>
+              <div><input class="at-mini-input" value="40"/></div>
+              <div><input class="at-mini-input" value="70"/></div>
+              <div><input class="at-mini-input" value="10"/></div>
+              <div><label class="toggle"><input type="checkbox"/><span class="toggle-track"></span><span class="toggle-thumb"></span></label></div>
+            </div>
+            <div class="at-row">
+              <div class="at-agent"><span class="at-ico">🏥</span>ClaimsAgent-7</div>
+              <div><input class="at-mini-input" value="40"/></div>
+              <div><input class="at-mini-input" value="65"/></div>
+              <div><input class="at-mini-input" value="20"/></div>
+              <div><label class="toggle"><input type="checkbox"/><span class="toggle-track"></span><span class="toggle-thumb"></span></label></div>
+            </div>
+            <div class="at-row" style="background:rgba(239,68,68,.04)">
+              <div class="at-agent"><span class="at-ico">💊</span>PriorAuth-HC</div>
+              <div><input class="at-mini-input" value="30" style="border-color:rgba(239,68,68,.4)"/></div>
+              <div><input class="at-mini-input" value="60" style="border-color:rgba(239,68,68,.4)"/></div>
+              <div><input class="at-mini-input" value="15" style="border-color:rgba(239,68,68,.4)"/></div>
+              <div><label class="toggle"><input type="checkbox" checked/><span class="toggle-track"></span><span class="toggle-thumb"></span></label></div>
+            </div>
+            <div class="at-row">
+              <div class="at-agent"><span class="at-ico">🏠</span>MortgageBot-B</div>
+              <div><input class="at-mini-input" value="40"/></div>
+              <div><input class="at-mini-input" value="70"/></div>
+              <div><input class="at-mini-input" value="10"/></div>
+              <div><label class="toggle"><input type="checkbox"/><span class="toggle-track"></span><span class="toggle-thumb"></span></label></div>
+            </div>
+            <div class="at-row">
+              <div class="at-agent"><span class="at-ico">🚗</span>ClaimsAgent-3</div>
+              <div><input class="at-mini-input" value="40"/></div>
+              <div><input class="at-mini-input" value="70"/></div>
+              <div><input class="at-mini-input" value="10"/></div>
+              <div><label class="toggle"><input type="checkbox"/><span class="toggle-track"></span><span class="toggle-thumb"></span></label></div>
+            </div>
+            <div class="at-row" style="background:rgba(239,68,68,.04)">
+              <div class="at-agent"><span class="at-ico">🔍</span>FraudScanner-X</div>
+              <div><input class="at-mini-input" value="25" style="border-color:rgba(239,68,68,.4)"/></div>
+              <div><input class="at-mini-input" value="55" style="border-color:rgba(239,68,68,.4)"/></div>
+              <div><input class="at-mini-input" value="8"  style="border-color:rgba(239,68,68,.4)"/></div>
+              <div><label class="toggle"><input type="checkbox" checked/><span class="toggle-track"></span><span class="toggle-thumb"></span></label></div>
+            </div>
+          </div>
+          <div style="padding:12px 14px;font-size:11px;color:var(--dim)">💊 PriorAuth-HC and 🔍 FraudScanner-X have tighter thresholds and auto-block enabled due to active Critical status.</div>
+        </div>
+      </div>
+
+      <!-- Recent Alerts -->
+      <div class="config-card">
+        <div class="cc-head">
+          <div class="cc-head-left">
+            <span class="cc-head-icon">🕐</span>
+            <div>
+              <h3>Recent Alerts</h3>
+              <p>Last 24 hours — <span id="unacked-count">4</span> unacknowledged</p>
+            </div>
+          </div>
+          <button class="btn btn-ghost btn-sm" onclick="ackAll()">Ack All</button>
+        </div>
+        <div class="cc-body" style="padding-top:0">
+          <div class="alert-history" id="alert-history"></div>
+        </div>
+      </div>
+
+    </div><!-- /right col -->
+
+  </div>
+  </div><!-- /page-alerts -->
+
+</div><!-- /content -->
+</div><!-- /shell -->
+
+<!-- NEW RULE MODAL -->
+<div class="modal-bg" id="new-rule-modal">
+  <div class="modal">
+    <h3>Create New Rule</h3>
+    <p>Define a behavioral guardrail. Nullify will evaluate every agent decision against this rule in real time.</p>
+    <div class="form-row">
+      <label class="form-label">Rule Code</label>
+      <input class="form-input" placeholder="e.g. INS-SEVERITY-03" id="new-code"/>
+    </div>
+    <div class="form-row">
+      <label class="form-label">Rule Name</label>
+      <input class="form-input" placeholder="Short descriptive name" id="new-name"/>
+    </div>
+    <div class="form-row">
+      <label class="form-label">Description</label>
+      <input class="form-input" placeholder="What does this rule catch?" id="new-desc"/>
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+      <div class="form-row">
+        <label class="form-label">Vertical</label>
+        <select class="form-select" id="new-vert">
+          <option>INS</option><option>LOAN</option><option>HC</option><option>FRAUD</option><option>SYS</option>
+        </select>
+      </div>
+      <div class="form-row">
+        <label class="form-label">Severity</label>
+        <select class="form-select" id="new-sev">
+          <option>critical</option><option>high</option><option>medium</option><option>low</option>
+        </select>
+      </div>
+    </div>
+    <div class="form-row">
+      <label class="form-label">On Trigger</label>
+      <select class="form-select" id="new-action">
+        <option value="block">Block decision</option>
+        <option value="escalate">Escalate to human</option>
+        <option value="alert">Alert only (log)</option>
+      </select>
+    </div>
+    <div class="modal-actions">
+      <button class="btn btn-ghost" style="flex:1" onclick="closeModal()">Cancel</button>
+      <button class="btn btn-primary" style="flex:1" onclick="createRule()">Create Rule</button>
+    </div>
+  </div>
+</div>
+
+<!-- TOAST -->
+<div class="toast" id="toast"><span id="toast-msg"></span></div>
+
+<script>
+// ── DATA ─────────────────────────────────────────────────
+const RULES = [
+  // INSURANCE
+  {code:'INS-SEVERITY-02',name:'Injury Severity Gate',desc:'Blocks decisions where injury severity classification is at least 2 tiers below ICD-10 diagnosis code severity mapping.',vert:'INS',sev:'critical',agents:['ClaimsAgent-7'],action:'block',violations:11,active:true,
+    thresholds:[{l:'Severity tier deviation allowed',v:'1'},{l:'ICD-10 lookup timeout (ms)',v:'200'},{l:'Override requires',v:'2 reviewers'}],
+    recent:[{d:'Severity classified "minor" for ICD-10 S32.0 (lumbar fracture). $14,200 claim blocked.',t:'2h ago'},{d:'Soft tissue code applied to compound fracture claim. $8,400 blocked.',t:'5h ago'}]},
+  {code:'INS-SEVERITY-03',name:'Total Loss Assessment Gate',desc:'Validates that total-loss determinations match ACV calculations within 5% tolerance before payout authorization.',vert:'INS',sev:'high',agents:['ClaimsAgent-7','ClaimsAgent-3'],action:'escalate',violations:2,active:true,
+    thresholds:[{l:'ACV tolerance (%)',v:'5'},{l:'Minimum ACV ($)',v:'1000'},{l:'Required photos',v:'4'}],
+    recent:[{d:'Total-loss declared on vehicle with ACV $6,200 but repair estimate $4,900. Flagged for review.',t:'11h ago'}]},
+  {code:'INS-COVERAGE-07',name:'Policy-Claim Type Match',desc:'Ensures commercial policy codes are not applied to personal claims, and vice versa.',vert:'INS',sev:'high',agents:['ClaimsAgent-7'],action:'block',violations:1,active:true,
+    thresholds:[{l:'Policy type mismatch action',v:'block'},{l:'Override requires',v:'supervisor'}],
+    recent:[{d:'Commercial GL policy applied to personal auto claim #CLM-4488.',t:'8h ago'}]},
+  {code:'INS-DEDUCTIBLE-01',name:'Deductible Application Check',desc:'Confirms correct deductible amount is applied before net payout calculation.',vert:'INS',sev:'medium',agents:['ClaimsAgent-3','ClaimsAgent-7'],action:'alert',violations:0,active:true,
+    thresholds:[{l:'Deductible tolerance ($)',v:'0'},{l:'Alert channel',v:'Slack'}],
+    recent:[]},
+  {code:'INS-DUPLICATE-01',name:'Duplicate Claim Submission',desc:'Cross-references claim IDs, policy numbers, and incident dates to block duplicate submissions.',vert:'INS',sev:'high',agents:['ClaimsAgent-3','ClaimsAgent-7'],action:'block',violations:1,active:true,
+    thresholds:[{l:'Match window (days)',v:'90'},{l:'Fields matched',v:'3 of 4'}],
+    recent:[{d:'Claim CLM-4491 matched CLM-4380 on policy, date, and loss type.',t:'14h ago'}]},
+
+  // FINTECH / LOAN
+  {code:'LOAN-DTI-01',name:'Debt-to-Income Ratio Gate',desc:'Blocks loan approvals where applicant DTI exceeds 43% per CFPB Qualified Mortgage guidelines.',vert:'LOAN',sev:'critical',agents:['LoanBot-Alpha','MortgageBot-B'],action:'block',violations:1,active:true,
+    thresholds:[{l:'Max DTI (%)',v:'43'},{l:'Calculation method',v:'Front-end + back-end'},{l:'Grace range (%)',v:'2'}],
+    recent:[{d:'DTI marginally exceeded 43% — 44.1%. Escalated to human review per grace range policy.',t:'3d ago'}]},
+  {code:'LOAN-GEO-04',name:'Geographic Risk Tier Verification',desc:'Requires flood/wildfire/seismic insurance verification for properties in designated high-risk geographic zones before mortgage approval.',vert:'LOAN',sev:'high',agents:['MortgageBot-B'],action:'block',violations:8,active:true,
+    thresholds:[{l:'Risk zone data source',v:'FEMA 2024-Q1'},{l:'Required insurance types',v:'Flood, wind'},{l:'Verification timeout',v:'48h'}],
+    recent:[{d:'Flood Zone 3 property approved without flood insurance. FEMA data feed may be stale.',t:'6h ago'},{d:'Same zone, second instance. GEO data refresh needed.',t:'11h ago'}]},
+  {code:'LOAN-LTV-02',name:'Loan-to-Value Ratio Cap',desc:'Enforces LTV ≤ 80% for conventional loans without PMI documentation.',vert:'LOAN',sev:'high',agents:['LoanBot-Alpha','MortgageBot-B'],action:'block',violations:0,active:true,
+    thresholds:[{l:'Max LTV without PMI (%)',v:'80'},{l:'Max LTV with PMI (%)',v:'95'}],
+    recent:[]},
+  {code:'LOAN-STIP-03',name:'Income Verification Requirement',desc:'Flags loan decisions where applicant income cannot be verified against stated source within 24h.',vert:'LOAN',sev:'medium',agents:['LoanBot-Alpha'],action:'escalate',violations:0,active:true,
+    thresholds:[{l:'Verification window (h)',v:'24'},{l:'Accepted sources',v:'W2, tax return, paystub'}],
+    recent:[]},
+  {code:'LOAN-RATE-05',name:'Rate Lock Compliance',desc:'Validates that approved rate matches locked rate within 0.125% tolerance at time of decision.',vert:'LOAN',sev:'medium',agents:['MortgageBot-B'],action:'block',violations:0,active:false,
+    thresholds:[{l:'Tolerance (bps)',v:'12.5'},{l:'Lock expiry buffer (days)',v:'3'}],
+    recent:[]},
+
+  // HEALTHCARE
+  {code:'HC-FORMULARY-01',name:'Formulary Cross-Check',desc:'Requires procedure CPT code to match at least one approved ICD-10 diagnosis code in plan formulary before prior authorization.',vert:'HC',sev:'critical',agents:['PriorAuth-HC'],action:'block',violations:58,active:true,
+    thresholds:[{l:'ICD-10 match required',v:'exact'},{l:'Formulary version',v:'2026-Q1'},{l:'Exception requires',v:'MD review'}],
+    recent:[{d:'CPT-27447 (knee replacement) approved without matching orthopedic ICD-10. Depression diagnosis on file. $38K exposure.',t:'4m ago'},{d:'Same pattern — 8th formulary violation in 3h. Formulary lookup step appears broken.',t:'1h ago'}]},
+  {code:'HC-DIAG-MATCH-03',name:'Diagnosis-Procedure Coherence',desc:'Flags authorizations where the procedure category does not match the diagnosis category (e.g. mental health procedure against physical therapy benefit).',vert:'HC',sev:'critical',agents:['PriorAuth-HC'],action:'block',violations:15,active:true,
+    thresholds:[{l:'Category mismatch action',v:'block'},{l:'Allowed cross-category codes',v:'12 exceptions'}],
+    recent:[{d:'Mental health CPT code authorized against physical therapy benefit limit.',t:'37m ago'}]},
+  {code:'HC-AUTH-EXPIRY-02',name:'Authorization Expiry Gate',desc:'Blocks use of prior authorizations that have expired or are within 48h of expiration without renewal.',vert:'HC',sev:'high',agents:['PriorAuth-HC'],action:'block',violations:0,active:true,
+    thresholds:[{l:'Expiry buffer (h)',v:'48'},{l:'Renewal lead time (days)',v:'5'}],
+    recent:[]},
+  {code:'HC-NETWORK-04',name:'In-Network Provider Verification',desc:'Confirms rendering provider is in-network for the member\'s plan before authorizing procedure.',vert:'HC',sev:'medium',agents:['PriorAuth-HC'],action:'escalate',violations:0,active:true,
+    thresholds:[{l:'Network lookup source',v:'Provider directory API'},{l:'Lookup timeout (ms)',v:'500'}],
+    recent:[]},
+
+  // FRAUD
+  {code:'FRAUD-THRESH-09',name:'Fraud Signal Threshold',desc:'Blocks transactions where composite fraud risk score exceeds defined threshold based on velocity, geography, device, and behavioral signals.',vert:'FRAUD',sev:'critical',agents:['FraudScanner-X'],action:'block',violations:1,active:true,
+    thresholds:[{l:'Block threshold (score)',v:'75'},{l:'Review threshold (score)',v:'50'},{l:'Lookback window (h)',v:'24'}],
+    recent:[{d:'Transaction scored 82/100 by upstream rule, cleared by FraudScanner. Manual catch confirmed false negative.',t:'18m ago'}]},
+  {code:'FRAUD-VELOCITY-03',name:'Transaction Velocity Gate',desc:'Flags accounts exceeding N transactions in a rolling time window as potential card-testing or account takeover.',vert:'FRAUD',sev:'high',agents:['FraudScanner-X'],action:'escalate',violations:0,active:true,
+    thresholds:[{l:'Max transactions / hour',v:'15'},{l:'Max amount / hour ($)',v:'5000'},{l:'Window (min)',v:'60'}],
+    recent:[]},
+  {code:'FRAUD-GEO-02',name:'Impossible Travel Detection',desc:'Blocks transactions where card is used in two locations that cannot be reached within the elapsed time.',vert:'FRAUD',sev:'critical',agents:['FraudScanner-X'],action:'block',violations:0,active:true,
+    thresholds:[{l:'Min travel time buffer (min)',v:'30'},{l:'Speed limit assumption (km/h)',v:'900'}],
+    recent:[]},
+
+  // SYSTEM
+  {code:'SYS-DRIFT-01',name:'Behavioral Drift Alert',desc:'System rule that fires when any agent\'s drift score crosses the configured threshold, regardless of specific rule violations.',vert:'SYS',sev:'critical',agents:['All agents'],action:'alert',violations:2,active:true,
+    thresholds:[{l:'Warning threshold',v:'40'},{l:'Critical threshold',v:'70'},{l:'Measurement window (h)',v:'48'}],
+    recent:[{d:'PriorAuth-HC drift crossed 70 → L2 escalation triggered.',t:'3h ago'},{d:'FraudScanner-X drift crossed 85 → L3 auto-block prompt sent.',t:'1h ago'}]},
+  {code:'SYS-LATENCY-02',name:'Decision Latency SLA',desc:'Alerts if Nullify\'s decision evaluation latency exceeds SLA threshold, indicating infrastructure pressure.',vert:'SYS',sev:'medium',agents:['All agents'],action:'alert',violations:0,active:true,
+    thresholds:[{l:'P95 latency SLA (ms)',v:'10'},{l:'P99 latency SLA (ms)',v:'25'},{l:'Alert window (min)',v:'5'}],
+    recent:[]},
+];
+
+const ALERTS_DATA = [
+  {level:'critical',icon:'🚨',title:'FraudScanner-X — Auto-Block Triggered',detail:'Drift score reached 91. Block rate collapsed 94% in 48h. Auto-block prompt sent to CISO and CTO.',meta:['5m ago','L3 Escalation','PagerDuty + Email + Slack'],acked:false},
+  {level:'critical',icon:'🚨',title:'PriorAuth-HC — Formulary Bypass Detected',detail:'73rd violation in 24h. CPT-27447 approved without ICD-10 match. $38K exposure flagged.',meta:['18m ago','L2 Escalation','PagerDuty + Email'],acked:false},
+  {level:'critical',icon:'🛑',title:'FraudScanner-X — False Negative Confirmed',detail:'Transaction scored 82 by upstream rule, cleared by agent. Manual reviewer confirmed fraud.',meta:['35m ago','L2 Escalation','Slack + Email'],acked:false},
+  {level:'warning',icon:'⚠️',title:'ClaimsAgent-7 — Violation Rate Climbing',detail:'14 violations in 24h, up from 0 three days ago. INS-SEVERITY-02 triggered 11/14 times. Pattern developing.',meta:['2h ago','L1 Escalation','Slack'],acked:false},
+  {level:'warning',icon:'⚠️',title:'MortgageBot-B — Stale Geo-Risk Data',detail:'8 geographic tier violations in 3 days. FEMA data feed timestamp: 2025-11-12. Refresh recommended.',meta:['6h ago','L1 Escalation','Slack'],acked:true},
+  {level:'critical',icon:'📈',title:'PriorAuth-HC — Drift Surge Detected',detail:'Drift score moved 31 → 87 in 48h. SYS-DRIFT-01 fired. Fastest drift progression in fleet history.',meta:['8h ago','L3 Auto-Block','All channels'],acked:true},
+  {level:'warning',icon:'🔍',title:'FraudScanner-X — Block Rate Anomaly',detail:'Block rate dropped from 1.7% to 0.4% over 24h. Anomaly detected by SYS-DRIFT-01 baseline monitor.',meta:['48h ago','L1 Escalation','Slack'],acked:true},
+];
+
+// ── STATE ──────────────────────────────────────────────
+let currentVert = 'all';
+let expandedRule = null;
+
+// ── RENDER RULES ────────────────────────────────────────
+function renderRules(rules) {
+  const body = document.getElementById('rules-body');
+  if (rules.length === 0) {
+    body.innerHTML = '<div style="padding:32px;text-align:center;color:var(--dim);font-size:13px">No rules match your filters.</div>';
+    return;
+  }
+  body.innerHTML = rules.map((r, i) => {
+    const realIdx = RULES.indexOf(r);
+    const sevMap = {critical:'sev-critical',high:'sev-high',medium:'sev-medium',low:'sev-low'};
+    const codeClass = {INS:'code-ins',LOAN:'code-fin',HC:'code-hc',FRAUD:'code-fr',SYS:'code-sys'}[r.vert]||'code-sys';
+    const vClass = r.violations > 20 ? 'v-high' : r.violations > 5 ? 'v-med' : r.violations > 0 ? 'v-low' : 'v-zero';
+    const actionIcon = {block:'🛑',escalate:'🔍',alert:'🔔'}[r.action];
+    const isExpanded = expandedRule === realIdx;
+
+    const thresholdRows = r.thresholds.map(t => `
+      <div class="threshold-row">
+        <span class="lbl">${t.l}</span>
+        <input class="threshold-input" value="${t.v}" onchange="markDirty()" title="Edit threshold"/>
+      </div>`).join('');
+
+    const violLog = r.recent.length === 0
+      ? '<div style="color:var(--dim);font-size:12px;padding:8px 0">No violations in last 24h ✓</div>'
+      : r.recent.map(v => `<div class="vlog-item"><div class="vc">Blocked</div><div class="vd">${v.d}</div><div class="vt">${v.t}</div></div>`).join('');
+
+    const actionRows = [
+      {icon:'🛑',lbl:'On trigger',val: r.action === 'block' ? 'Block decision immediately' : r.action === 'escalate' ? 'Escalate to human reviewer' : 'Log & alert only'},
+      {icon:'📡',lbl:'Notify via',val:'Slack #nullify-alerts'},
+      {icon:'📋',lbl:'Audit log',val:'Full decision context saved'},
+    ].map(a => `<div class="action-item"><span class="a-icon">${a.icon}</span><span class="a-lbl">${a.lbl}</span><span class="a-val">${a.val}</span></div>`).join('');
+
+    return `
+      <div class="rule-row${isExpanded?' expanded':''}" id="rule-row-${realIdx}" onclick="toggleExpand(${realIdx})">
+        <div class="rule-code ${codeClass}">${r.code}</div>
+        <div class="rule-name-wrap">
+          <div class="name">${r.name}</div>
+          <div class="sub">${r.desc.substring(0,62)}${r.desc.length>62?'…':''}</div>
+        </div>
+        <div><span class="sev-badge ${sevMap[r.sev]}">${r.sev}</span></div>
+        <div class="agent-tags">${r.agents.map(a=>`<span class="agent-tag">${a}</span>`).join('')}</div>
+        <div style="font-size:13px">${actionIcon} ${r.action.charAt(0).toUpperCase()+r.action.slice(1)}</div>
+        <div class="violations-num ${vClass}">${r.violations}${r.violations>0?' ↑':''}</div>
+        <div>
+          <label class="toggle" onclick="event.stopPropagation()">
+            <input type="checkbox" ${r.active?'checked':''} onchange="toggleRule(${realIdx},this.checked)"/>
+            <span class="toggle-track"></span>
+            <span class="toggle-thumb"></span>
+          </label>
+        </div>
+      </div>
+      ${isExpanded ? `
+      <div style="grid-column:1/-1;background:rgba(0,0,0,.2);border-bottom:1px solid var(--border)">
+        <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:0;padding:20px 24px 20px">
+          <div style="padding-right:24px;border-right:1px solid var(--border)">
+            <div class="expand-section"><h4>Thresholds</h4>${thresholdRows}</div>
+          </div>
+          <div style="padding:0 24px;border-right:1px solid var(--border)">
+            <div class="expand-section"><h4>On Trigger</h4><div class="action-row">${actionRows}</div></div>
+          </div>
+          <div style="padding-left:24px">
+            <div class="expand-section"><h4>Recent Violations (${r.violations})</h4><div class="violation-log">${violLog}</div></div>
+          </div>
+        </div>
+        <div style="padding:12px 24px;border-top:1px solid var(--border);display:flex;gap:8px;justify-content:flex-end">
+          <button class="btn btn-ghost btn-sm" onclick="event.stopPropagation();toast('Rule duplicated')">Duplicate</button>
+          <button class="btn btn-danger btn-sm" onclick="event.stopPropagation();deleteRule(${realIdx})">Delete Rule</button>
+          <button class="btn btn-primary btn-sm" onclick="event.stopPropagation();toast('Rule saved ✓');toggleExpand(${realIdx})">Save Changes</button>
+        </div>
+      </div>` : ''}
+    `;
+  }).join('');
+}
+
+function toggleExpand(idx) {
+  expandedRule = expandedRule === idx ? null : idx;
+  applyFilters();
+}
+
+// ── FILTER ──────────────────────────────────────────────
+function applyFilters() {
+  const q = document.getElementById('rule-search').value.toLowerCase();
+  const sev = document.getElementById('sev-filter').value;
+  const status = document.getElementById('status-filter').value;
+  let rules = RULES.filter(r => {
+    const matchVert = currentVert === 'all' || r.vert === currentVert;
+    const matchQ = !q || r.code.toLowerCase().includes(q) || r.name.toLowerCase().includes(q) || r.desc.toLowerCase().includes(q);
+    const matchSev = !sev || r.sev === sev;
+    const matchStatus = !status || (status==='active'?r.active:!r.active);
+    return matchVert && matchQ && matchSev && matchStatus;
+  });
+  renderRules(rules);
+}
+
+function filterRules() { applyFilters(); }
+
+function setVert(v, btn) {
+  currentVert = v;
+  document.querySelectorAll('.chip').forEach(c => c.classList.remove('active'));
+  btn.classList.add('active');
+  applyFilters();
+}
+
+// ── TOGGLE RULE ─────────────────────────────────────────
+function toggleRule(idx, active) {
+  RULES[idx].active = active;
+  const active_count = RULES.filter(r=>r.active).length;
+  document.getElementById('stat-active').textContent = active_count;
+  toast(`Rule ${RULES[idx].code} ${active ? 'enabled' : 'disabled'}`);
+}
+
+// ── CREATE RULE ─────────────────────────────────────────
+function openNewRule() {
+  document.getElementById('new-rule-modal').classList.add('open');
+}
+function closeModal() {
+  document.getElementById('new-rule-modal').classList.remove('open');
+}
+function createRule() {
+  const code = document.getElementById('new-code').value.trim();
+  const name = document.getElementById('new-name').value.trim();
+  const desc = document.getElementById('new-desc').value.trim();
+  const vert = document.getElementById('new-vert').value;
+  const sev  = document.getElementById('new-sev').value;
+  const action = document.getElementById('new-action').value;
+  if (!code || !name) { toast('Rule code and name are required'); return; }
+  RULES.push({code,name,desc,vert,sev,agents:[],action,violations:0,active:true,thresholds:[],recent:[]});
+  document.getElementById('rule-count').textContent = RULES.length;
+  document.getElementById('stat-total').textContent = RULES.length;
+  document.getElementById('stat-active').textContent = RULES.filter(r=>r.active).length;
+  closeModal();
+  applyFilters();
+  toast(`Rule ${code} created ✓`);
+}
+
+function deleteRule(idx) {
+  if (!confirm(`Delete rule ${RULES[idx].code}?`)) return;
+  RULES.splice(idx,1);
+  expandedRule = null;
+  document.getElementById('rule-count').textContent = RULES.length;
+  document.getElementById('stat-total').textContent = RULES.length;
+  applyFilters();
+  toast('Rule deleted');
+}
+
+// ── RENDER ALERTS ────────────────────────────────────────
+function renderAlerts() {
+  const el = document.getElementById('alert-history');
+  el.innerHTML = ALERTS_DATA.map((a,i) => `
+    <div class="alert-item a-${a.level}" id="alert-${i}">
+      <div class="alert-ico">${a.icon}</div>
+      <div class="alert-body">
+        <div class="alert-title">${a.title}</div>
+        <div class="alert-detail">${a.detail}</div>
+        <div class="alert-meta">
+          ${a.meta.map(m=>`<span>${m}</span>`).join('<span style="color:var(--border2)">·</span>')}
+        </div>
+      </div>
+      <button class="alert-ack ${a.acked?'acked':''}" onclick="ackAlert(${i})">${a.acked?'✓ Acked':'Ack'}</button>
+    </div>`).join('');
+  updateUnacked();
+}
+
+function ackAlert(i) {
+  ALERTS_DATA[i].acked = true;
+  renderAlerts();
+  toast('Alert acknowledged');
+}
+
+function ackAll() {
+  ALERTS_DATA.forEach(a => a.acked = true);
+  renderAlerts();
+  toast('All alerts acknowledged');
+}
+
+function updateUnacked() {
+  const n = ALERTS_DATA.filter(a=>!a.acked).length;
+  document.getElementById('unacked-count').textContent = n;
+  document.getElementById('alert-count').textContent = n > 0 ? n + ' new' : ALERTS_DATA.length;
+}
+
+// ── UI HELPERS ───────────────────────────────────────────
+function switchTab(tab, btn) {
+  document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+  btn.classList.add('active');
+  document.getElementById('page-' + tab).classList.add('active');
+}
+
+function updateSlider(id, val, unit) {
+  document.getElementById(id).innerHTML = val + '<span class="thr-unit">' + unit + '</span>';
+  toast('Threshold updated — save to apply');
+}
+
+function testChannel(name) {
+  toast(`Test alert sent to ${name} ✓`);
+}
+
+function openAddChannel() {
+  toast('Channel marketplace coming in v2.1');
+}
+
+function saveAll() {
+  toast('All changes saved ✓');
+}
+
+function markDirty() {
+  // could show unsaved indicator
+}
+
+let toastTimer;
+function toast(msg) {
+  const t = document.getElementById('toast');
+  document.getElementById('toast-msg').textContent = msg;
+  t.classList.add('show');
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => t.classList.remove('show'), 2800);
+}
+
+// ── INIT ─────────────────────────────────────────────────
+applyFilters();
+renderAlerts();
+</script>
+</body>
+</html>

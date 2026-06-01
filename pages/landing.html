@@ -1,0 +1,2100 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Nullify AI — Real-Time Decision Guardrails for Enterprise AI</title>
+  <meta name="description" content="Stop bad AI decisions before they execute. Nullify AI intercepts every agent action, evaluates it against your behavioral rules, and blocks violations in milliseconds — before the first bad loan funds or the first wrong claim pays out." />
+
+  <!-- ============================================================
+       DEVELOPER HANDOFF NOTES
+       ============================================================
+       Font stack: Inter (body), Syne or Space Grotesk (headings).
+       Load from Google Fonts:
+         https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Syne:wght@600;700;800&display=swap
+
+       Color palette:
+         --brand-dark:   #0A0E1A  (near-black navy — backgrounds)
+         --brand-mid:    #111827  (card backgrounds)
+         --brand-accent: #6C63FF  (primary purple — CTAs, highlights)
+         --brand-glow:   #4F46E5  (darker purple — hover states)
+         --brand-teal:   #14B8A6  (secondary accent — success states)
+         --brand-red:    #EF4444  (danger/alert — blocked decisions)
+         --text-primary: #F9FAFB
+         --text-muted:   #9CA3AF
+         --border:       #1F2937
+
+       Grid system: 12-column, max-width 1200px, centered, 24px gutters.
+       Mobile breakpoint: 768px. All sections stack vertically on mobile.
+
+       A/B TEST CANDIDATES (marked with [TEST]):
+         - Hero headline (Section 1)
+         - Primary CTA button text (Section 1)
+         - Pricing section structure (Section 7)
+         - FAQ ordering (Section 8)
+       ============================================================ -->
+
+  <style>
+    /* ── RESET & BASE ─────────────────────────────────────────── */
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --brand-dark:   #0A0E1A;
+      --brand-mid:    #111827;
+      --brand-card:   #141C2E;
+      --brand-accent: #6C63FF;
+      --brand-glow:   #4F46E5;
+      --brand-teal:   #14B8A6;
+      --brand-red:    #EF4444;
+      --text-primary: #F9FAFB;
+      --text-muted:   #9CA3AF;
+      --text-dim:     #6B7280;
+      --border:       #1F2937;
+      --border-light: #374151;
+    }
+
+    html { scroll-behavior: smooth; }
+
+    body {
+      font-family: 'Inter', system-ui, -apple-system, sans-serif;
+      background: var(--brand-dark);
+      color: var(--text-primary);
+      line-height: 1.6;
+      font-size: 16px;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    h1, h2, h3, h4 {
+      font-family: 'Syne', 'Space Grotesk', system-ui, sans-serif;
+      line-height: 1.15;
+      letter-spacing: -0.02em;
+    }
+
+    a { color: inherit; text-decoration: none; }
+
+    img { max-width: 100%; display: block; }
+
+    .container {
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 0 24px;
+    }
+
+    .section { padding: 100px 0; }
+    .section-sm { padding: 60px 0; }
+
+    /* ── TYPOGRAPHY UTILITIES ─────────────────────────────────── */
+    .eyebrow {
+      font-size: 12px;
+      font-weight: 600;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      color: var(--brand-accent);
+      margin-bottom: 16px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .eyebrow::before {
+      content: '';
+      display: inline-block;
+      width: 20px;
+      height: 2px;
+      background: var(--brand-accent);
+      flex-shrink: 0;
+    }
+
+    .section-headline {
+      font-size: clamp(32px, 4vw, 48px);
+      font-weight: 800;
+      color: var(--text-primary);
+      margin-bottom: 20px;
+    }
+
+    .section-sub {
+      font-size: 18px;
+      color: var(--text-muted);
+      max-width: 600px;
+      line-height: 1.7;
+    }
+
+    .text-accent { color: var(--brand-accent); }
+    .text-teal   { color: var(--brand-teal); }
+    .text-red    { color: var(--brand-red); }
+
+    /* ── BUTTONS ──────────────────────────────────────────────── */
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 14px 28px;
+      border-radius: 8px;
+      font-size: 15px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      border: none;
+      white-space: nowrap;
+    }
+
+    .btn-primary {
+      background: var(--brand-accent);
+      color: #fff;
+    }
+    .btn-primary:hover {
+      background: var(--brand-glow);
+      transform: translateY(-1px);
+      box-shadow: 0 8px 30px rgba(108, 99, 255, 0.4);
+    }
+
+    .btn-outline {
+      background: transparent;
+      color: var(--text-primary);
+      border: 1.5px solid var(--border-light);
+    }
+    .btn-outline:hover {
+      border-color: var(--brand-accent);
+      color: var(--brand-accent);
+    }
+
+    .btn-lg {
+      padding: 18px 36px;
+      font-size: 17px;
+      border-radius: 10px;
+    }
+
+    /* ── CARD ─────────────────────────────────────────────────── */
+    .card {
+      background: var(--brand-card);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      padding: 32px;
+    }
+
+    /* ── BADGE ────────────────────────────────────────────────── */
+    .badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 6px 14px;
+      border-radius: 100px;
+      font-size: 13px;
+      font-weight: 500;
+    }
+    .badge-purple { background: rgba(108,99,255,0.15); color: var(--brand-accent); border: 1px solid rgba(108,99,255,0.3); }
+    .badge-teal   { background: rgba(20,184,166,0.15); color: var(--brand-teal);   border: 1px solid rgba(20,184,166,0.3); }
+    .badge-red    { background: rgba(239,68,68,0.15);  color: var(--brand-red);    border: 1px solid rgba(239,68,68,0.3);  }
+
+    /* ── DIVIDER ──────────────────────────────────────────────── */
+    .divider {
+      border: none;
+      border-top: 1px solid var(--border);
+    }
+
+    /* ── GRID HELPERS ─────────────────────────────────────────── */
+    .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 32px; }
+    .grid-3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 24px; }
+    .grid-4 { display: grid; grid-template-columns: repeat(4, 1fr); gap: 20px; }
+
+    @media (max-width: 768px) {
+      .grid-2, .grid-3, .grid-4 { grid-template-columns: 1fr; }
+      .section { padding: 64px 0; }
+    }
+
+    /* ══════════════════════════════════════════════════════════
+       SECTION 0 — NAV
+       Layout: sticky top bar, logo left, links center-right, CTA far right
+    ══════════════════════════════════════════════════════════ */
+    nav {
+      position: sticky;
+      top: 0;
+      z-index: 100;
+      background: rgba(10, 14, 26, 0.85);
+      backdrop-filter: blur(16px);
+      border-bottom: 1px solid var(--border);
+    }
+
+    .nav-inner {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      height: 68px;
+      gap: 32px;
+    }
+
+    .nav-logo {
+      font-family: 'Syne', sans-serif;
+      font-size: 22px;
+      font-weight: 800;
+      letter-spacing: -0.03em;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .nav-logo .logo-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: var(--brand-accent);
+      display: inline-block;
+    }
+
+    .nav-links {
+      display: flex;
+      align-items: center;
+      gap: 32px;
+      list-style: none;
+      flex: 1;
+      justify-content: center;
+    }
+
+    .nav-links a {
+      font-size: 14px;
+      font-weight: 500;
+      color: var(--text-muted);
+      transition: color 0.15s;
+    }
+    .nav-links a:hover { color: var(--text-primary); }
+
+    .nav-actions { display: flex; gap: 12px; align-items: center; }
+
+    @media (max-width: 768px) {
+      .nav-links { display: none; }
+    }
+
+    /* ══════════════════════════════════════════════════════════
+       SECTION 1 — HERO (ABOVE THE FOLD)
+       Layout: centered, dark starfield bg, headline centered,
+               live-decision ticker below CTA for social proof.
+       [TEST]: Headline A/B — see comment below
+    ══════════════════════════════════════════════════════════ */
+    .hero {
+      position: relative;
+      min-height: 92vh;
+      display: flex;
+      align-items: center;
+      padding: 120px 0 80px;
+      overflow: hidden;
+    }
+
+    /* Background grid effect — developer: use CSS grid lines or SVG pattern */
+    .hero::before {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background-image:
+        linear-gradient(rgba(108,99,255,0.06) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(108,99,255,0.06) 1px, transparent 1px);
+      background-size: 60px 60px;
+      pointer-events: none;
+    }
+
+    /* Glow orb behind headline — developer: position: absolute radial gradient */
+    .hero::after {
+      content: '';
+      position: absolute;
+      top: 0; left: 50%;
+      transform: translateX(-50%);
+      width: 800px;
+      height: 500px;
+      background: radial-gradient(ellipse at 50% 30%, rgba(108,99,255,0.18) 0%, transparent 70%);
+      pointer-events: none;
+    }
+
+    .hero-content {
+      position: relative;
+      z-index: 1;
+      text-align: center;
+      max-width: 800px;
+      margin: 0 auto;
+    }
+
+    .hero-kicker {
+      margin-bottom: 24px;
+      display: flex;
+      justify-content: center;
+    }
+
+    .hero-headline {
+      font-size: clamp(40px, 6vw, 72px);
+      font-weight: 800;
+      line-height: 1.08;
+      margin-bottom: 24px;
+      letter-spacing: -0.03em;
+    }
+
+    /* [TEST A] Primary headline — direct, outcome-focused */
+    /* [TEST B] Alternative: "Your AI Agents Are Making 200 Decisions an Hour. Are You Sure Every One Is Correct?" */
+
+    .hero-sub {
+      font-size: 20px;
+      color: var(--text-muted);
+      max-width: 560px;
+      margin: 0 auto 40px;
+      line-height: 1.65;
+    }
+
+    .hero-cta {
+      display: flex;
+      gap: 16px;
+      justify-content: center;
+      flex-wrap: wrap;
+      margin-bottom: 56px;
+    }
+
+    /* Social proof ticker */
+    .hero-social-proof {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 12px;
+      font-size: 14px;
+      color: var(--text-muted);
+    }
+
+    .avatar-stack {
+      display: flex;
+    }
+    .avatar-stack .av {
+      width: 32px;
+      height: 32px;
+      border-radius: 50%;
+      border: 2px solid var(--brand-dark);
+      background: linear-gradient(135deg, var(--brand-accent), var(--brand-teal));
+      margin-right: -8px;
+      font-size: 11px;
+      font-weight: 700;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: white;
+    }
+    .avatar-stack .av:last-child { margin-right: 0; }
+
+    /* ── Decision intercept animation (hero visual) ──────────── */
+    /* Developer: render as animated SVG or Lottie file.
+       Concept: stream of decision cards flowing down-left →
+       Nullify AI intercept layer in center (purple shield icon) →
+       green "APPROVED" cards exit right / red "BLOCKED" cards
+       bounce back with error label.
+       Static fallback: screenshot of the dashboard UI. */
+    .hero-visual {
+      margin-top: 72px;
+      position: relative;
+    }
+
+    .decision-stream {
+      background: var(--brand-card);
+      border: 1px solid var(--border);
+      border-radius: 20px;
+      padding: 24px;
+      max-width: 780px;
+      margin: 0 auto;
+      box-shadow: 0 40px 80px rgba(0,0,0,0.4), 0 0 0 1px rgba(108,99,255,0.1);
+    }
+
+    .ds-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 20px;
+      padding-bottom: 16px;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .ds-title {
+      font-size: 13px;
+      font-weight: 600;
+      color: var(--text-muted);
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .pulse-dot {
+      width: 8px; height: 8px;
+      border-radius: 50%;
+      background: var(--brand-teal);
+      animation: pulse 1.8s infinite;
+    }
+    @keyframes pulse {
+      0%, 100% { opacity: 1; transform: scale(1); }
+      50%       { opacity: 0.5; transform: scale(0.85); }
+    }
+
+    .ds-stats {
+      display: flex;
+      gap: 24px;
+    }
+    .ds-stat { text-align: right; }
+    .ds-stat .val { font-size: 22px; font-weight: 700; font-family: 'Syne', sans-serif; }
+    .ds-stat .lbl { font-size: 11px; color: var(--text-dim); text-transform: uppercase; letter-spacing: 0.06em; }
+
+    .decision-rows {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+
+    .decision-row {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 12px 16px;
+      border-radius: 10px;
+      font-size: 13px;
+      border: 1px solid transparent;
+      animation: slideIn 0.4s ease;
+    }
+    @keyframes slideIn {
+      from { opacity: 0; transform: translateX(-10px); }
+      to   { opacity: 1; transform: translateX(0); }
+    }
+
+    .dr-approved { background: rgba(20,184,166,0.08); border-color: rgba(20,184,166,0.2); }
+    .dr-blocked  { background: rgba(239,68,68,0.08);  border-color: rgba(239,68,68,0.2);  }
+    .dr-reviewing{ background: rgba(108,99,255,0.08); border-color: rgba(108,99,255,0.2); }
+
+    .dr-icon { font-size: 16px; flex-shrink: 0; }
+    .dr-desc { flex: 1; color: var(--text-muted); }
+    .dr-desc strong { color: var(--text-primary); font-weight: 500; }
+    .dr-status {
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      padding: 4px 10px;
+      border-radius: 100px;
+    }
+    .dr-approved .dr-status { background: rgba(20,184,166,0.2); color: var(--brand-teal); }
+    .dr-blocked  .dr-status { background: rgba(239,68,68,0.2);  color: var(--brand-red); }
+    .dr-reviewing .dr-status { background: rgba(108,99,255,0.2); color: var(--brand-accent); }
+
+    .dr-latency { font-size: 11px; color: var(--text-dim); flex-shrink: 0; font-variant-numeric: tabular-nums; }
+
+
+    /* ══════════════════════════════════════════════════════════
+       SECTION 2 — TRUST INDICATORS STRIP
+       Layout: single row, dark background, 4-5 items separated
+               by faint vertical dividers.
+       [NOTE]: Replace placeholder logos with actual SVG logos of
+               enterprise clients or frameworks (OpenAI, Azure,
+               AWS Bedrock, Anthropic) once available.
+    ══════════════════════════════════════════════════════════ */
+    .trust-strip {
+      background: var(--brand-mid);
+      border-top: 1px solid var(--border);
+      border-bottom: 1px solid var(--border);
+      padding: 28px 0;
+    }
+
+    .trust-inner {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 32px;
+      flex-wrap: wrap;
+    }
+
+    .trust-label {
+      font-size: 12px;
+      color: var(--text-dim);
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+      white-space: nowrap;
+    }
+
+    .trust-logos {
+      display: flex;
+      align-items: center;
+      gap: 40px;
+      flex: 1;
+      justify-content: flex-end;
+      flex-wrap: wrap;
+    }
+
+    .trust-logo {
+      font-size: 13px;
+      font-weight: 600;
+      color: var(--text-dim);
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      white-space: nowrap;
+      filter: grayscale(1) opacity(0.5);
+      transition: filter 0.2s;
+    }
+    .trust-logo:hover { filter: grayscale(0) opacity(1); }
+
+    .trust-logo-icon {
+      width: 24px; height: 24px;
+      border-radius: 6px;
+      background: var(--border-light);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 13px;
+    }
+
+    /* ══════════════════════════════════════════════════════════
+       SECTION 3 — PROBLEM / PAIN
+       Layout: left column headline + pain points;
+               right column: visual comparison (Before / After)
+               showing cost of uncaught AI error.
+    ══════════════════════════════════════════════════════════ */
+    .problem-visual {
+      position: relative;
+    }
+
+    .comparison-cards {
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+    }
+
+    .comparison-card {
+      border-radius: 12px;
+      padding: 20px;
+      border: 1px solid;
+    }
+
+    .cc-before {
+      background: rgba(239,68,68,0.06);
+      border-color: rgba(239,68,68,0.2);
+    }
+    .cc-after {
+      background: rgba(20,184,166,0.06);
+      border-color: rgba(20,184,166,0.2);
+    }
+
+    .cc-label {
+      font-size: 11px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+      margin-bottom: 12px;
+    }
+    .cc-before .cc-label { color: var(--brand-red); }
+    .cc-after  .cc-label { color: var(--brand-teal); }
+
+    .cc-scenario {
+      font-size: 14px;
+      color: var(--text-muted);
+      line-height: 1.6;
+    }
+
+    .cc-metric {
+      margin-top: 12px;
+      font-size: 24px;
+      font-weight: 800;
+      font-family: 'Syne', sans-serif;
+    }
+    .cc-before .cc-metric { color: var(--brand-red); }
+    .cc-after  .cc-metric { color: var(--brand-teal); }
+
+    .pain-points {
+      display: flex;
+      flex-direction: column;
+      gap: 20px;
+      margin: 32px 0;
+    }
+
+    .pain-item {
+      display: flex;
+      gap: 16px;
+      align-items: flex-start;
+    }
+
+    .pain-icon {
+      width: 40px; height: 40px;
+      border-radius: 10px;
+      background: rgba(239,68,68,0.1);
+      border: 1px solid rgba(239,68,68,0.2);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 18px;
+      flex-shrink: 0;
+    }
+
+    .pain-text h4 {
+      font-size: 16px;
+      font-weight: 600;
+      margin-bottom: 4px;
+      font-family: 'Inter', sans-serif;
+    }
+
+    .pain-text p {
+      font-size: 14px;
+      color: var(--text-muted);
+      line-height: 1.6;
+    }
+
+    /* ══════════════════════════════════════════════════════════
+       SECTION 4 — SOLUTION OVERVIEW
+       Layout: centered headline, 3-column benefit cards below,
+               dashboard preview image/mockup at bottom.
+    ══════════════════════════════════════════════════════════ */
+    .benefit-cards {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 20px;
+      margin-top: 56px;
+    }
+
+    .benefit-card {
+      background: var(--brand-card);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      padding: 28px;
+      position: relative;
+      overflow: hidden;
+      transition: border-color 0.2s, transform 0.2s;
+    }
+    .benefit-card:hover {
+      border-color: var(--brand-accent);
+      transform: translateY(-2px);
+    }
+
+    .benefit-card::before {
+      content: '';
+      position: absolute;
+      top: 0; left: 0; right: 0;
+      height: 3px;
+      background: linear-gradient(90deg, var(--brand-accent), var(--brand-teal));
+      opacity: 0;
+      transition: opacity 0.2s;
+    }
+    .benefit-card:hover::before { opacity: 1; }
+
+    .benefit-icon {
+      font-size: 28px;
+      margin-bottom: 16px;
+    }
+
+    .benefit-card h3 {
+      font-size: 18px;
+      font-weight: 700;
+      margin-bottom: 10px;
+      font-family: 'Syne', sans-serif;
+    }
+
+    .benefit-card p {
+      font-size: 14px;
+      color: var(--text-muted);
+      line-height: 1.65;
+    }
+
+    @media (max-width: 768px) {
+      .benefit-cards { grid-template-columns: 1fr; }
+    }
+
+    /* ══════════════════════════════════════════════════════════
+       SECTION 5 — HOW IT WORKS (PROCESS)
+       Layout: horizontal stepped flow (desktop), vertical (mobile).
+               Steps connected by arrow/line graphic.
+    ══════════════════════════════════════════════════════════ */
+    .process-steps {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 0;
+      margin-top: 56px;
+      position: relative;
+    }
+
+    /* Connecting line between steps */
+    .process-steps::before {
+      content: '';
+      position: absolute;
+      top: 28px;
+      left: calc(12.5% + 16px);
+      right: calc(12.5% + 16px);
+      height: 2px;
+      background: linear-gradient(90deg, var(--brand-accent) 0%, var(--brand-teal) 100%);
+      opacity: 0.3;
+    }
+
+    .process-step {
+      padding: 0 20px;
+      text-align: center;
+      position: relative;
+    }
+
+    .step-num {
+      width: 56px; height: 56px;
+      border-radius: 50%;
+      background: linear-gradient(135deg, var(--brand-accent), var(--brand-glow));
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 20px;
+      font-weight: 800;
+      font-family: 'Syne', sans-serif;
+      margin: 0 auto 20px;
+      position: relative;
+      z-index: 1;
+      box-shadow: 0 0 0 8px rgba(108,99,255,0.12);
+    }
+
+    .process-step h3 {
+      font-size: 17px;
+      font-weight: 700;
+      margin-bottom: 8px;
+      font-family: 'Syne', sans-serif;
+    }
+
+    .process-step p {
+      font-size: 13px;
+      color: var(--text-muted);
+      line-height: 1.6;
+    }
+
+    @media (max-width: 768px) {
+      .process-steps { grid-template-columns: 1fr; gap: 32px; }
+      .process-steps::before { display: none; }
+    }
+
+    /* ══════════════════════════════════════════════════════════
+       SECTION 6 — FEATURES / BENEFITS
+       Layout: 2-column grid of feature cards (icon + title + desc)
+               alternating between left-heavy and right-heavy on desktop.
+    ══════════════════════════════════════════════════════════ */
+    .features-grid {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 20px;
+      margin-top: 56px;
+    }
+
+    .feature-card {
+      background: var(--brand-card);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      padding: 32px;
+      display: flex;
+      gap: 20px;
+      align-items: flex-start;
+      transition: border-color 0.2s;
+    }
+    .feature-card:hover { border-color: rgba(108,99,255,0.4); }
+
+    .feature-icon-wrap {
+      width: 48px; height: 48px;
+      border-radius: 12px;
+      background: rgba(108,99,255,0.12);
+      border: 1px solid rgba(108,99,255,0.2);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 22px;
+      flex-shrink: 0;
+    }
+
+    .feature-text h3 {
+      font-size: 17px;
+      font-weight: 700;
+      margin-bottom: 8px;
+      font-family: 'Syne', sans-serif;
+    }
+
+    .feature-text p {
+      font-size: 14px;
+      color: var(--text-muted);
+      line-height: 1.65;
+    }
+
+    @media (max-width: 768px) {
+      .features-grid { grid-template-columns: 1fr; }
+    }
+
+    /* ══════════════════════════════════════════════════════════
+       SECTION 7 — SOCIAL PROOF
+       Layout: headline centered; 3-column testimonial cards below;
+               stat row beneath cards.
+    ══════════════════════════════════════════════════════════ */
+    .testimonials {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 20px;
+      margin-top: 48px;
+    }
+
+    .testimonial-card {
+      background: var(--brand-card);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      padding: 28px;
+      display: flex;
+      flex-direction: column;
+      gap: 20px;
+    }
+
+    .stars {
+      color: #F59E0B;
+      font-size: 14px;
+      letter-spacing: 2px;
+    }
+
+    .testimonial-card blockquote {
+      font-size: 15px;
+      line-height: 1.7;
+      color: var(--text-primary);
+      flex: 1;
+      font-style: italic;
+    }
+
+    .testimonial-card blockquote::before {
+      content: '"';
+      font-size: 48px;
+      line-height: 0;
+      vertical-align: -0.4em;
+      color: var(--brand-accent);
+      font-family: Georgia, serif;
+      margin-right: 4px;
+    }
+
+    .testimonial-author {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .author-avatar {
+      width: 40px; height: 40px;
+      border-radius: 50%;
+      background: linear-gradient(135deg, var(--brand-accent), var(--brand-teal));
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 14px;
+      font-weight: 700;
+      color: white;
+      flex-shrink: 0;
+    }
+
+    .author-info .name { font-size: 14px; font-weight: 600; }
+    .author-info .role { font-size: 12px; color: var(--text-muted); }
+
+    @media (max-width: 768px) {
+      .testimonials { grid-template-columns: 1fr; }
+    }
+
+    .stats-row {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 1px;
+      background: var(--border);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      overflow: hidden;
+      margin-top: 48px;
+    }
+
+    .stat-cell {
+      background: var(--brand-card);
+      padding: 32px 24px;
+      text-align: center;
+    }
+
+    .stat-cell .num {
+      font-size: 40px;
+      font-weight: 800;
+      font-family: 'Syne', sans-serif;
+      background: linear-gradient(135deg, var(--brand-accent), var(--brand-teal));
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+      display: block;
+    }
+
+    .stat-cell .desc {
+      font-size: 13px;
+      color: var(--text-muted);
+      margin-top: 6px;
+    }
+
+    @media (max-width: 768px) {
+      .stats-row { grid-template-columns: repeat(2, 1fr); }
+    }
+
+    /* ══════════════════════════════════════════════════════════
+       SECTION 8 — PRICING
+       Layout: centered headline, 3 pricing cards side by side.
+               Middle card ("Pro") is highlighted/elevated.
+    ══════════════════════════════════════════════════════════ */
+    .pricing-cards {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 20px;
+      margin-top: 48px;
+      align-items: start;
+    }
+
+    .pricing-card {
+      background: var(--brand-card);
+      border: 1px solid var(--border);
+      border-radius: 20px;
+      padding: 36px;
+      position: relative;
+    }
+
+    .pricing-card.featured {
+      background: linear-gradient(145deg, rgba(108,99,255,0.1), rgba(79,70,229,0.05));
+      border-color: var(--brand-accent);
+      box-shadow: 0 0 0 1px var(--brand-accent), 0 20px 60px rgba(108,99,255,0.2);
+    }
+
+    .plan-badge {
+      position: absolute;
+      top: -14px;
+      left: 50%;
+      transform: translateX(-50%);
+      background: var(--brand-accent);
+      color: white;
+      font-size: 12px;
+      font-weight: 700;
+      padding: 4px 16px;
+      border-radius: 100px;
+      white-space: nowrap;
+    }
+
+    .plan-name {
+      font-size: 14px;
+      font-weight: 600;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      margin-bottom: 16px;
+    }
+
+    .plan-price {
+      font-size: 42px;
+      font-weight: 800;
+      font-family: 'Syne', sans-serif;
+      line-height: 1;
+      margin-bottom: 6px;
+    }
+
+    .plan-price span {
+      font-size: 16px;
+      font-weight: 500;
+      color: var(--text-muted);
+    }
+
+    .plan-desc {
+      font-size: 13px;
+      color: var(--text-muted);
+      margin-bottom: 28px;
+      line-height: 1.5;
+    }
+
+    .plan-features {
+      list-style: none;
+      margin-bottom: 32px;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+
+    .plan-features li {
+      font-size: 14px;
+      color: var(--text-muted);
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .plan-features li::before {
+      content: '✓';
+      color: var(--brand-teal);
+      font-weight: 700;
+      font-size: 13px;
+      flex-shrink: 0;
+    }
+
+    .plan-features li.disabled {
+      opacity: 0.35;
+      text-decoration: line-through;
+    }
+    .plan-features li.disabled::before { content: '—'; color: var(--text-dim); }
+
+    @media (max-width: 768px) {
+      .pricing-cards { grid-template-columns: 1fr; }
+    }
+
+    /* ══════════════════════════════════════════════════════════
+       SECTION 9 — FAQ
+       Layout: two-column accordion (desktop), single column (mobile).
+    ══════════════════════════════════════════════════════════ */
+    .faq-grid {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 16px;
+      margin-top: 48px;
+    }
+
+    .faq-item {
+      background: var(--brand-card);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      overflow: hidden;
+    }
+
+    .faq-q {
+      width: 100%;
+      background: none;
+      border: none;
+      color: var(--text-primary);
+      text-align: left;
+      padding: 22px 24px;
+      font-size: 15px;
+      font-weight: 600;
+      font-family: inherit;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 16px;
+      transition: color 0.15s;
+    }
+
+    .faq-q:hover { color: var(--brand-accent); }
+
+    .faq-q .faq-arrow {
+      font-size: 18px;
+      color: var(--text-dim);
+      flex-shrink: 0;
+      transition: transform 0.2s;
+    }
+
+    .faq-item.open .faq-arrow { transform: rotate(45deg); }
+    .faq-item.open .faq-q { color: var(--brand-accent); }
+
+    .faq-a {
+      padding: 0 24px;
+      max-height: 0;
+      overflow: hidden;
+      transition: max-height 0.3s ease, padding 0.2s;
+    }
+
+    .faq-item.open .faq-a {
+      max-height: 400px;
+      padding-bottom: 22px;
+    }
+
+    .faq-a p {
+      font-size: 14px;
+      color: var(--text-muted);
+      line-height: 1.7;
+    }
+
+    @media (max-width: 768px) {
+      .faq-grid { grid-template-columns: 1fr; }
+    }
+
+    /* ══════════════════════════════════════════════════════════
+       SECTION 10 — FINAL CTA
+       Layout: full-width dark gradient panel, centered text,
+               large CTA button, trust signals below.
+    ══════════════════════════════════════════════════════════ */
+    .final-cta {
+      background: linear-gradient(145deg, rgba(108,99,255,0.1) 0%, transparent 60%);
+      border-top: 1px solid rgba(108,99,255,0.2);
+      border-bottom: 1px solid var(--border);
+      text-align: center;
+    }
+
+    .final-cta h2 {
+      font-size: clamp(32px, 4vw, 52px);
+      font-weight: 800;
+      max-width: 700px;
+      margin: 0 auto 20px;
+    }
+
+    .final-cta p {
+      font-size: 18px;
+      color: var(--text-muted);
+      max-width: 520px;
+      margin: 0 auto 40px;
+    }
+
+    .cta-trust {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 28px;
+      margin-top: 32px;
+      flex-wrap: wrap;
+    }
+
+    .trust-item {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 13px;
+      color: var(--text-muted);
+    }
+
+    .trust-item span.icon { font-size: 16px; }
+
+    /* ══════════════════════════════════════════════════════════
+       FOOTER
+       Layout: 4-column links + brand column, single-row bottom bar.
+    ══════════════════════════════════════════════════════════ */
+    footer {
+      background: var(--brand-mid);
+      border-top: 1px solid var(--border);
+      padding: 64px 0 32px;
+    }
+
+    .footer-grid {
+      display: grid;
+      grid-template-columns: 2fr 1fr 1fr 1fr;
+      gap: 48px;
+      margin-bottom: 56px;
+    }
+
+    .footer-brand .nav-logo {
+      font-size: 20px;
+      margin-bottom: 16px;
+    }
+
+    .footer-brand p {
+      font-size: 14px;
+      color: var(--text-muted);
+      line-height: 1.7;
+      max-width: 280px;
+    }
+
+    .footer-col h4 {
+      font-size: 13px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: var(--text-dim);
+      margin-bottom: 20px;
+      font-family: 'Inter', sans-serif;
+    }
+
+    .footer-col ul {
+      list-style: none;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+
+    .footer-col a {
+      font-size: 14px;
+      color: var(--text-muted);
+      transition: color 0.15s;
+    }
+    .footer-col a:hover { color: var(--text-primary); }
+
+    .footer-bottom {
+      border-top: 1px solid var(--border);
+      padding-top: 28px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      flex-wrap: wrap;
+      gap: 16px;
+      font-size: 13px;
+      color: var(--text-dim);
+    }
+
+    .footer-socials { display: flex; gap: 16px; }
+    .footer-socials a {
+      color: var(--text-dim);
+      transition: color 0.15s;
+      font-size: 18px;
+    }
+    .footer-socials a:hover { color: var(--text-primary); }
+
+    @media (max-width: 768px) {
+      .footer-grid { grid-template-columns: 1fr 1fr; }
+    }
+    @media (max-width: 480px) {
+      .footer-grid { grid-template-columns: 1fr; }
+    }
+
+    /* ══════════════════════════════════════════════════════════
+       REGULATORY BANNER (sticky bottom on mobile, inline on desktop)
+       Appears on scroll to highlight EU AI Act deadline urgency.
+    ══════════════════════════════════════════════════════════ */
+    .reg-banner {
+      background: linear-gradient(90deg, rgba(239,68,68,0.1), rgba(108,99,255,0.1));
+      border: 1px solid rgba(239,68,68,0.25);
+      border-radius: 12px;
+      padding: 16px 24px;
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      margin: 40px 0;
+      flex-wrap: wrap;
+    }
+
+    .reg-banner .icon { font-size: 24px; flex-shrink: 0; }
+    .reg-banner .text { flex: 1; font-size: 14px; color: var(--text-muted); }
+    .reg-banner .text strong { color: var(--text-primary); }
+  </style>
+</head>
+<body>
+
+<!-- ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+     NAVIGATION
+     Developer: Sticky, glassmorphism. Add hamburger menu for mobile.
+     ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ -->
+<nav>
+  <div class="container">
+    <div class="nav-inner">
+      <div class="nav-logo">
+        <span class="logo-dot"></span>
+        Nullify AI
+      </div>
+      <ul class="nav-links">
+        <li><a href="#solution">How It Works</a></li>
+        <li><a href="#features">Features</a></li>
+        <li><a href="#proof">Case Studies</a></li>
+        <li><a href="#pricing">Pricing</a></li>
+        <li><a href="#faq">FAQ</a></li>
+      </ul>
+      <div class="nav-actions">
+        <a href="#" class="btn btn-outline">Log in</a>
+        <a href="#cta" class="btn btn-primary">Book a Demo</a>
+      </div>
+    </div>
+  </div>
+</nav>
+
+
+<!-- ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+     SECTION 1 — HERO (ABOVE THE FOLD)
+     Wireframe: Centered layout. Eyebrow tag → H1 → subhead → CTA row →
+     social proof → animated decision-stream dashboard mockup below.
+     Background: dark with subtle purple grid + radial glow behind headline.
+     ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ -->
+<section class="hero">
+  <div class="container">
+    <div class="hero-content">
+
+      <div class="hero-kicker">
+        <span class="badge badge-purple">
+          ⚡ Real-Time AI Decision Control
+        </span>
+      </div>
+
+      <!-- [TEST A] Primary headline -->
+      <h1 class="hero-headline">
+        Stop Bad AI Decisions<br/>
+        <span class="text-accent">Before They Happen</span>
+      </h1>
+
+      <!-- [TEST B] Alternative headline (swap in for A/B test):
+      <h1 class="hero-headline">
+        Your AI Agents Process<br/>
+        <span class="text-accent">200 Decisions an Hour.</span><br/>
+        One Bad Rule Costs Millions.
+      </h1>
+      -->
+
+      <p class="hero-sub">
+        Nullify AI sits between your AI agents and the real world — intercepting every decision, evaluating it against your behavioral rules, and approving or blocking it in milliseconds. Before a single bad claim pays out.
+      </p>
+
+      <div class="hero-cta">
+        <!-- [TEST]: "Book a Demo" vs "See It In Action" vs "Start Free Pilot" -->
+        <a href="#cta" class="btn btn-primary btn-lg">
+          Book a Demo →
+        </a>
+        <a href="#solution" class="btn btn-outline btn-lg">
+          Watch 3-min Overview
+        </a>
+      </div>
+
+      <div class="hero-social-proof">
+        <div class="avatar-stack">
+          <div class="av">JL</div>
+          <div class="av">MS</div>
+          <div class="av">AK</div>
+          <div class="av">RP</div>
+        </div>
+        <span>Trusted by compliance leads at 20+ enterprise teams in fintech, insurance &amp; healthcare</span>
+      </div>
+
+    </div>
+
+    <!-- Hero visual: animated decision-stream dashboard mockup -->
+    <!-- Developer: animate each row with CSS keyframes or Framer Motion.
+         New rows appear every ~1.8s cycling through approved/blocked/reviewing states.
+         Add a real screenshot of the product here once available. -->
+    <div class="hero-visual">
+      <div class="decision-stream">
+        <div class="ds-header">
+          <div class="ds-title">
+            <div class="pulse-dot"></div>
+            Nullify AI — Live Decision Monitor
+          </div>
+          <div class="ds-stats">
+            <div class="ds-stat">
+              <div class="val text-teal">99.3%</div>
+              <div class="lbl">Approved</div>
+            </div>
+            <div class="ds-stat">
+              <div class="val text-red">0.7%</div>
+              <div class="lbl">Blocked</div>
+            </div>
+            <div class="ds-stat">
+              <div class="val" style="color:#F9FAFB">2,847</div>
+              <div class="lbl">Today's Decisions</div>
+            </div>
+          </div>
+        </div>
+        <div class="decision-rows">
+          <div class="decision-row dr-approved">
+            <div class="dr-icon">📋</div>
+            <div class="dr-desc"><strong>Loan Application #8821</strong> — Credit score 712, DTI 28%, within parameters</div>
+            <div class="dr-latency">4ms</div>
+            <div class="dr-status">Approved</div>
+          </div>
+          <div class="decision-row dr-blocked">
+            <div class="dr-icon">🚨</div>
+            <div class="dr-desc"><strong>Claim #CLM-4490</strong> — Severity classification exceeds policy limit by 340% · Rule: INS-SEVERITY-02</div>
+            <div class="dr-latency">6ms</div>
+            <div class="dr-status">Blocked</div>
+          </div>
+          <div class="decision-row dr-approved">
+            <div class="dr-icon">📋</div>
+            <div class="dr-desc"><strong>Prior Authorization #PA-1123</strong> — Procedure code matched, within formulary</div>
+            <div class="dr-latency">3ms</div>
+            <div class="dr-status">Approved</div>
+          </div>
+          <div class="decision-row dr-reviewing">
+            <div class="dr-icon">🔍</div>
+            <div class="dr-desc"><strong>Loan Application #8822</strong> — Applicant income unverified · Escalating to human review</div>
+            <div class="dr-latency">8ms</div>
+            <div class="dr-status">Reviewing</div>
+          </div>
+          <div class="decision-row dr-blocked">
+            <div class="dr-icon">🚨</div>
+            <div class="dr-desc"><strong>Loan Application #8823</strong> — Outside approved geographic risk tier · Rule: LOAN-GEO-04</div>
+            <div class="dr-latency">5ms</div>
+            <div class="dr-status">Blocked</div>
+          </div>
+        </div>
+      </div>
+    </div><!-- /hero-visual -->
+
+  </div>
+</section>
+
+
+<!-- ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+     SECTION 2 — TRUST INDICATORS STRIP
+     Wireframe: Single row, "Integrates with" label left,
+     framework/partner logos right (greyscale, hover to color).
+     ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ -->
+<section class="trust-strip">
+  <div class="container">
+    <div class="trust-inner">
+      <span class="trust-label">Integrates natively with</span>
+      <div class="trust-logos">
+        <!-- Developer: Replace these with real SVG logos -->
+        <span class="trust-logo"><span class="trust-logo-icon">🤖</span> OpenAI</span>
+        <span class="trust-logo"><span class="trust-logo-icon">🧠</span> Anthropic</span>
+        <span class="trust-logo"><span class="trust-logo-icon">☁️</span> AWS Bedrock</span>
+        <span class="trust-logo"><span class="trust-logo-icon">🔷</span> Azure AI</span>
+        <span class="trust-logo"><span class="trust-logo-icon">🔗</span> LangChain</span>
+        <span class="trust-logo"><span class="trust-logo-icon">🤝</span> CrewAI</span>
+      </div>
+    </div>
+  </div>
+</section>
+
+
+<!-- ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+     SECTION 3 — PROBLEM / PAIN
+     Wireframe: Left column = headline + 4 pain points.
+     Right column = Before/After cost comparison cards.
+     Background: dark, no decorative elements (let problem breathe).
+     ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ -->
+<section class="section" id="problem">
+  <div class="container">
+    <div class="grid-2" style="align-items: center; gap: 64px;">
+
+      <div>
+        <div class="eyebrow">The Problem</div>
+        <h2 class="section-headline">
+          Human-Speed Monitoring Tools Can't Keep Up With AI-Speed Mistakes
+        </h2>
+        <p class="section-sub" style="margin-bottom: 40px;">
+          Your monitoring tools were built for human reviewers who handle 12 decisions a day. Your AI agents handle 200 an hour. By the time the next audit cycle runs, the damage is done.
+        </p>
+
+        <div class="pain-points">
+
+          <div class="pain-item">
+            <div class="pain-icon">⚡</div>
+            <div class="pain-text">
+              <h4>Velocity outpaces oversight</h4>
+              <p>An AI claims agent misclassifying injury severity doesn't affect one case. It affects every case it touches before anyone notices — potentially thousands of decisions per day.</p>
+            </div>
+          </div>
+
+          <div class="pain-item">
+            <div class="pain-icon">🕳️</div>
+            <div class="pain-text">
+              <h4>Post-hoc audits find problems after the money's gone</h4>
+              <p>Today's AI governance tools monitor and report. They flag what went wrong last week. They cannot intercept and stop a bad decision that's executing right now.</p>
+            </div>
+          </div>
+
+          <div class="pain-item">
+            <div class="pain-icon">⚖️</div>
+            <div class="pain-text">
+              <h4>Regulations don't wait for you to be ready</h4>
+              <p>The EU AI Act mandates real-time monitoring for high-risk AI by August 2026. US frameworks are following. Companies scrambling to build compliance infrastructure at mandate time will pay 3–10x more.</p>
+            </div>
+          </div>
+
+          <div class="pain-item">
+            <div class="pain-icon">💸</div>
+            <div class="pain-text">
+              <h4>One miscalibration costs more than years of the fix</h4>
+              <p>A single compliance failure in a regulated industry — fines, remediation, reputational damage — routinely exceeds $10 million. The cost of prevention is a rounding error by comparison.</p>
+            </div>
+          </div>
+
+        </div>
+      </div><!-- /left col -->
+
+      <div class="problem-visual">
+        <div class="comparison-cards">
+
+          <div class="comparison-card cc-before">
+            <div class="cc-label">❌ Without Nullify AI</div>
+            <div class="cc-scenario">
+              AI claims agent applies incorrect severity rule. Processes 847 claims over 4 hours before next scheduled audit. Each overpaid by an average of $2,300.
+            </div>
+            <div class="cc-metric">$1.95M</div>
+            <div style="font-size:13px; color: var(--text-dim); margin-top: 4px;">in overpayments before detection</div>
+          </div>
+
+          <div class="comparison-card cc-after">
+            <div class="cc-label">✓ With Nullify AI</div>
+            <div class="cc-scenario">
+              First claim triggers behavioral rule INS-SEVERITY-02. Decision blocked in 6ms. Human escalation alert fires. Agent paused pending rule review.
+            </div>
+            <div class="cc-metric">$0</div>
+            <div style="font-size:13px; color: var(--text-dim); margin-top: 4px;">exposure — caught on decision #1</div>
+          </div>
+
+          <div class="reg-banner">
+            <div class="icon">🇪🇺</div>
+            <div class="text"><strong>EU AI Act deadline: August 2026.</strong> High-risk AI systems in finance, insurance, and healthcare must have real-time monitoring in place. Build it now or scramble later.</div>
+          </div>
+
+        </div>
+      </div><!-- /right col -->
+
+    </div>
+  </div>
+</section>
+
+
+<!-- ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+     SECTION 4 — SOLUTION OVERVIEW
+     Wireframe: Centered headline + subhead. Below: 3 benefit cards.
+     Tagline positions Nullify as an "AI safety layer" not just monitoring.
+     ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ -->
+<section class="section" id="solution" style="background: var(--brand-mid); border-top: 1px solid var(--border); border-bottom: 1px solid var(--border);">
+  <div class="container">
+    <div style="text-align: center; max-width: 680px; margin: 0 auto;">
+      <div class="eyebrow" style="justify-content: center;">The Solution</div>
+      <h2 class="section-headline">
+        An Enforcement Layer,<br/>Not Just Another Dashboard
+      </h2>
+      <p class="section-sub" style="margin: 0 auto;">
+        Nullify AI intercepts every decision your AI agents make before it reaches the real world. Not after the fact — in the moment, in milliseconds, with a verdict that either lets it through or stops it dead.
+      </p>
+    </div>
+
+    <div class="benefit-cards">
+
+      <div class="benefit-card">
+        <div class="benefit-icon">🛡️</div>
+        <h3>Pre-action, not post-audit</h3>
+        <p>Every agent decision passes through Nullify's enforcement layer before it executes. Approval, block, or escalate — decided in under 10ms. The audit log is a side effect, not the product.</p>
+      </div>
+
+      <div class="benefit-card">
+        <div class="benefit-icon">📐</div>
+        <h3>Rules that match how your business actually works</h3>
+        <p>Define behavioral guardrails in plain language or policy documents. Nullify translates them into enforceable logic. Your compliance team sets the rules; the system enforces them at machine speed.</p>
+      </div>
+
+      <div class="benefit-card">
+        <div class="benefit-icon">📈</div>
+        <h3>Gets smarter with every deployment</h3>
+        <p>Each intercepted decision feeds a behavioral baseline unique to your environment. Over time, Nullify surfaces pattern drift and edge cases your rule library didn't anticipate — before they cost you.</p>
+      </div>
+
+    </div>
+  </div>
+</section>
+
+
+<!-- ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+     SECTION 5 — HOW IT WORKS (PROCESS)
+     Wireframe: 4-step horizontal flow with connecting line.
+     Each step: numbered circle → title → 2-line description.
+     Mobile: vertical stack, no connector line.
+     ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ -->
+<section class="section" id="how-it-works">
+  <div class="container">
+    <div style="text-align: center; max-width: 600px; margin: 0 auto;">
+      <div class="eyebrow" style="justify-content: center;">How It Works</div>
+      <h2 class="section-headline">Up and Running in Days, Not Months</h2>
+      <p class="section-sub" style="margin: 0 auto;">
+        One API call stands between your AI agents and uncontrolled decisions. The integration takes hours; the protection is permanent.
+      </p>
+    </div>
+
+    <div class="process-steps">
+
+      <div class="process-step">
+        <div class="step-num">1</div>
+        <h3>Connect Your Agent</h3>
+        <p>Route your existing AI agent's decisions through the Nullify API. Works with OpenAI, Anthropic, AWS Bedrock, Azure, LangChain, and CrewAI — no architectural rebuild required.</p>
+      </div>
+
+      <div class="process-step">
+        <div class="step-num">2</div>
+        <h3>Define Your Rules</h3>
+        <p>Upload your compliance policies, risk parameters, and behavioral limits. Our team works alongside you to translate them into enforceable decision logic during onboarding.</p>
+      </div>
+
+      <div class="process-step">
+        <div class="step-num">3</div>
+        <h3>Every Decision Gets a Verdict</h3>
+        <p>Each agent action is intercepted, evaluated against your rule library, and returned with an APPROVED, BLOCKED, or ESCALATE verdict — in under 10 milliseconds.</p>
+      </div>
+
+      <div class="process-step">
+        <div class="step-num">4</div>
+        <h3>Baselines Sharpen Over Time</h3>
+        <p>Live decision data builds behavioral baselines specific to your deployment. Drift detection and anomaly alerts surface problems before they become incidents.</p>
+      </div>
+
+    </div>
+  </div>
+</section>
+
+
+<!-- ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+     SECTION 6 — FEATURES / BENEFITS
+     Wireframe: Eyebrow + headline centered. Below: 2×3 grid of
+     feature cards. Each card: icon left + text right (horizontal).
+     ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ -->
+<section class="section" id="features" style="background: var(--brand-mid); border-top: 1px solid var(--border); border-bottom: 1px solid var(--border);">
+  <div class="container">
+    <div style="text-align: center; max-width: 600px; margin: 0 auto;">
+      <div class="eyebrow" style="justify-content: center;">Platform Capabilities</div>
+      <h2 class="section-headline">Everything You Need to Keep AI Agents Accountable</h2>
+    </div>
+
+    <div class="features-grid">
+
+      <div class="feature-card">
+        <div class="feature-icon-wrap">⚡</div>
+        <div class="feature-text">
+          <h3>Sub-10ms Decision Latency</h3>
+          <p>The enforcement layer adds under 10 milliseconds to your agent's decision cycle. Your customers won't notice. Your compliance team will sleep better.</p>
+        </div>
+      </div>
+
+      <div class="feature-card">
+        <div class="feature-icon-wrap">📜</div>
+        <div class="feature-text">
+          <h3>Plain-Language Rule Builder</h3>
+          <p>Write behavioral guardrails in plain English or upload your existing policy documents. Nullify converts them into enforceable decision logic — no engineering degree required.</p>
+        </div>
+      </div>
+
+      <div class="feature-card">
+        <div class="feature-icon-wrap">🔌</div>
+        <div class="feature-text">
+          <h3>Universal Agent Framework Support</h3>
+          <p>Works with OpenAI, Anthropic, AWS Bedrock, Azure AI, LangChain, CrewAI, and custom agent frameworks via a single REST API. Plug in, don't rebuild.</p>
+        </div>
+      </div>
+
+      <div class="feature-card">
+        <div class="feature-icon-wrap">📊</div>
+        <div class="feature-text">
+          <h3>Behavioral Baseline &amp; Drift Detection</h3>
+          <p>As real decisions accumulate, Nullify builds a behavioral fingerprint of your deployment. Drift alerts surface when agents start operating outside their expected envelope — before it becomes a problem.</p>
+        </div>
+      </div>
+
+      <div class="feature-card">
+        <div class="feature-icon-wrap">🔍</div>
+        <div class="feature-text">
+          <h3>Full Decision Audit Trail</h3>
+          <p>Every decision — approved, blocked, or escalated — is logged with the full evaluation context. Regulatory audit? Pull the complete record in seconds, not days.</p>
+        </div>
+      </div>
+
+      <div class="feature-card">
+        <div class="feature-icon-wrap">🏥</div>
+        <div class="feature-text">
+          <h3>Vertical-Specific Rule Libraries</h3>
+          <p>Pre-built compliance rule packages for insurance claim processing, loan underwriting, and healthcare prior authorization — built from real enterprise edge cases, not theoretical scenarios.</p>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</section>
+
+
+<!-- ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+     SECTION 7 — SOCIAL PROOF
+     Wireframe: Centered headline. 3-column testimonial cards.
+     Below cards: 4-column stats row.
+     Developer: Swap in real headshots for author avatars once available.
+     ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ -->
+<section class="section" id="proof">
+  <div class="container">
+    <div style="text-align: center; max-width: 600px; margin: 0 auto;">
+      <div class="eyebrow" style="justify-content: center;">Customer Results</div>
+      <h2 class="section-headline">Teams That Can't Afford to Get It Wrong Choose Nullify</h2>
+    </div>
+
+    <div class="testimonials">
+
+      <div class="testimonial-card">
+        <div class="stars">★★★★★</div>
+        <blockquote>
+          We deployed an AI underwriting agent and were terrified of edge cases slipping through on nights and weekends. Nullify gave us a way to put hard guardrails on the agent's authority before we'd feel comfortable taking humans out of the loop. It blocked 23 applications in the first week that would have funded outside our risk parameters.
+        </blockquote>
+        <div class="testimonial-author">
+          <!-- Developer: replace .av initials with actual headshot <img> -->
+          <div class="author-avatar">DL</div>
+          <div class="author-info">
+            <div class="name">David L.</div>
+            <div class="role">Head of AI Risk, Regional Bank (Midwest)</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="testimonial-card">
+        <div class="stars">★★★★★</div>
+        <blockquote>
+          Our claims team was processing thousands of cases a day with an AI agent and the compliance team had no visibility until the weekly audit. With Nullify, the compliance officer sees every blocked decision in real time. The first deployment paid for itself within the first month from one catch alone.
+        </blockquote>
+        <div class="testimonial-author">
+          <div class="author-avatar">SP</div>
+          <div class="author-info">
+            <div class="name">Sarah P.</div>
+            <div class="role">VP of Claims Operations, P&amp;C Insurer</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="testimonial-card">
+        <div class="stars">★★★★★</div>
+        <blockquote>
+          When our legal team flagged that we'd need real-time AI monitoring for EU AI Act compliance, I thought we'd be months away. The Nullify team had us integrated in four days and gave us the audit trail format our counsel needed. I wasn't expecting the onboarding to be a consulting engagement — but that's exactly what we needed.
+        </blockquote>
+        <div class="testimonial-author">
+          <div class="author-avatar">MK</div>
+          <div class="author-info">
+            <div class="name">Marcus K.</div>
+            <div class="role">Chief Compliance Officer, HealthTech Platform</div>
+          </div>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- Stats row -->
+    <div class="stats-row">
+      <div class="stat-cell">
+        <span class="num">&lt;10ms</span>
+        <div class="desc">Average decision latency added per evaluation</div>
+      </div>
+      <div class="stat-cell">
+        <span class="num">99.9%</span>
+        <div class="desc">Uptime SLA for enterprise deployments</div>
+      </div>
+      <div class="stat-cell">
+        <span class="num">$0</span>
+        <div class="desc">In bad decisions that made it past Nullify in production</div>
+      </div>
+      <div class="stat-cell">
+        <span class="num">4 days</span>
+        <div class="desc">Average time from signed contract to production deployment</div>
+      </div>
+    </div>
+
+  </div>
+</section>
+
+
+<!-- ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+     SECTION 8 — PRICING
+     Wireframe: Centered headline + framing copy.
+     3 pricing cards: Starter (left), Pro (center, elevated/featured),
+     Enterprise (right, custom quote). Pro card has "Most Popular" badge.
+     [TEST]: Try "pay-per-decision" pricing toggle vs fixed tiers.
+     ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ -->
+<section class="section" id="pricing" style="background: var(--brand-mid); border-top: 1px solid var(--border); border-bottom: 1px solid var(--border);">
+  <div class="container">
+    <div style="text-align: center; max-width: 640px; margin: 0 auto;">
+      <div class="eyebrow" style="justify-content: center;">Simple, Transparent Pricing</div>
+      <h2 class="section-headline">Less Than One Bad AI Decision Costs You</h2>
+      <p class="section-sub" style="margin: 0 auto 8px;">
+        One compliance failure in a regulated industry costs more than a decade of this subscription. Pricing scales with agent volume and risk exposure.
+      </p>
+    </div>
+
+    <div class="pricing-cards">
+
+      <!-- TIER 1: Starter -->
+      <div class="pricing-card">
+        <div class="plan-name">Starter</div>
+        <div class="plan-price">$50K <span>/ year</span></div>
+        <div class="plan-desc">For teams deploying AI agents in a single regulated workflow with &lt;10K decisions/month.</div>
+        <ul class="plan-features">
+          <li>Up to 10,000 decisions/month</li>
+          <li>1 agent framework integration</li>
+          <li>Pre-built rule library (1 vertical)</li>
+          <li>Real-time block &amp; escalate verdicts</li>
+          <li>Full audit log with CSV export</li>
+          <li>Email support + onboarding session</li>
+          <li class="disabled">Behavioral baseline &amp; drift alerts</li>
+          <li class="disabled">Custom rule development</li>
+          <li class="disabled">Dedicated compliance engineer</li>
+        </ul>
+        <a href="#cta" class="btn btn-outline" style="width: 100%; justify-content: center;">Book a Demo</a>
+        <p style="font-size: 12px; color: var(--text-dim); margin-top: 12px; text-align: center;">Best for: Teams in early AI agent deployment</p>
+      </div>
+
+      <!-- TIER 2: Pro (featured) -->
+      <div class="pricing-card featured">
+        <div class="plan-badge">Most Popular</div>
+        <div class="plan-name">Pro</div>
+        <div class="plan-price">$150K <span>/ year</span></div>
+        <div class="plan-desc">For compliance-critical teams running AI agents across multiple workflows or verticals.</div>
+        <ul class="plan-features">
+          <li>Up to 100,000 decisions/month</li>
+          <li>Unlimited agent framework integrations</li>
+          <li>Pre-built rule libraries (all verticals)</li>
+          <li>Real-time block &amp; escalate verdicts</li>
+          <li>Full audit log with API access</li>
+          <li>Behavioral baseline &amp; drift detection</li>
+          <li>Custom rule development (up to 20 rules)</li>
+          <li>Dedicated compliance engineer (20h/mo)</li>
+          <li class="disabled">On-premise / private cloud deployment</li>
+        </ul>
+        <a href="#cta" class="btn btn-primary" style="width: 100%; justify-content: center;">Book a Demo →</a>
+        <p style="font-size: 12px; color: var(--text-dim); margin-top: 12px; text-align: center;">Best for: Insurance, lending, and healthcare platforms</p>
+      </div>
+
+      <!-- TIER 3: Enterprise -->
+      <div class="pricing-card">
+        <div class="plan-name">Enterprise</div>
+        <div class="plan-price">$500K+ <span>/ year</span></div>
+        <div class="plan-desc">For large-scale AI operations with high decision volume, custom integration requirements, and maximum regulatory exposure.</div>
+        <ul class="plan-features">
+          <li>Unlimited decisions</li>
+          <li>All frameworks + custom API support</li>
+          <li>Full custom rule library development</li>
+          <li>On-premise or private cloud deployment</li>
+          <li>SLA-backed 99.9% uptime guarantee</li>
+          <li>Dedicated compliance engineer (full-time)</li>
+          <li>Regulatory audit support (EU AI Act, etc.)</li>
+          <li>Usage-based billing option available</li>
+          <li>Executive business review (quarterly)</li>
+        </ul>
+        <a href="#cta" class="btn btn-outline" style="width: 100%; justify-content: center;">Talk to Sales</a>
+        <p style="font-size: 12px; color: var(--text-dim); margin-top: 12px; text-align: center;">Best for: Banks, insurers, large health systems</p>
+      </div>
+
+    </div>
+
+    <p style="text-align: center; margin-top: 32px; font-size: 14px; color: var(--text-muted);">
+      Need usage-based billing? We offer <strong style="color: var(--text-primary);">$0.01–$0.10 per decision</strong> pricing for high-volume deployments. <a href="#cta" style="color: var(--brand-accent);">Talk to us →</a>
+    </p>
+
+  </div>
+</section>
+
+
+<!-- ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+     SECTION 9 — FAQ
+     Wireframe: Centered headline. 2-column accordion grid.
+     Developer: implement toggle with JS (example included below).
+     ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ -->
+<section class="section" id="faq">
+  <div class="container">
+    <div style="text-align: center; max-width: 560px; margin: 0 auto;">
+      <div class="eyebrow" style="justify-content: center;">FAQ</div>
+      <h2 class="section-headline">Questions We Get Every Time</h2>
+    </div>
+
+    <div class="faq-grid">
+
+      <div class="faq-item">
+        <button class="faq-q" onclick="toggleFaq(this)">
+          How much latency does Nullify add to my agent's decisions?
+          <span class="faq-arrow">+</span>
+        </button>
+        <div class="faq-a">
+          <p>In production, Nullify adds under 10 milliseconds to each decision cycle — typically 3–8ms depending on rule complexity. For virtually all enterprise use cases, this is undetectable to end users. We publish real latency data from production deployments so you can evaluate the actual impact before signing anything.</p>
+        </div>
+      </div>
+
+      <div class="faq-item">
+        <button class="faq-q" onclick="toggleFaq(this)">
+          Does our sensitive data leave our environment?
+          <span class="faq-arrow">+</span>
+        </button>
+        <div class="faq-a">
+          <p>No. Nullify evaluates decisions against your behavioral rules — it does not require access to the underlying data your agent is processing. For Enterprise customers, we offer on-premise and private cloud deployment so the enforcement layer runs entirely within your infrastructure. We are SOC 2 Type II compliant and HIPAA-ready.</p>
+        </div>
+      </div>
+
+      <div class="faq-item">
+        <button class="faq-q" onclick="toggleFaq(this)">
+          How long does implementation actually take?
+          <span class="faq-arrow">+</span>
+        </button>
+        <div class="faq-a">
+          <p>Most teams reach a working integration in 1–4 days. The API is a single endpoint: instead of calling your AI agent directly, you route through Nullify first. The more complex work is rule definition — which our compliance engineers do alongside your team during onboarding. We treat early deployments as consulting engagements because the edge cases you surface become the rule library no competitor can replicate.</p>
+        </div>
+      </div>
+
+      <div class="faq-item">
+        <button class="faq-q" onclick="toggleFaq(this)">
+          What happens if Nullify goes down? Does it block my agents?
+          <span class="faq-arrow">+</span>
+        </button>
+        <div class="faq-a">
+          <p>Enterprise contracts include a 99.9% uptime SLA with financial remedies for breaches. We offer two failover modes: (1) <strong>fail-open</strong> — decisions pass through if Nullify is unreachable, with retroactive audit logging, or (2) <strong>fail-closed</strong> — agents halt and alert until the enforcement layer is restored. Most compliance teams choose fail-closed for high-risk workflows. You configure this per-agent.</p>
+        </div>
+      </div>
+
+      <div class="faq-item">
+        <button class="faq-q" onclick="toggleFaq(this)">
+          We're not sure which rules to set. How do we start?
+          <span class="faq-arrow">+</span>
+        </button>
+        <div class="faq-a">
+          <p>Every enterprise onboarding starts with a rule definition workshop. You bring your compliance policies, risk parameters, and the scenarios that keep your team up at night. We translate them into enforceable decision logic and validate them against synthetic test cases before any production traffic flows through. You don't need to know what rules you need — you need to know what outcomes you can't afford.</p>
+        </div>
+      </div>
+
+      <div class="faq-item">
+        <button class="faq-q" onclick="toggleFaq(this)">
+          Does Nullify work with our existing AI frameworks?
+          <span class="faq-arrow">+</span>
+        </button>
+        <div class="faq-a">
+          <p>Yes. We have native integrations for OpenAI, Anthropic, AWS Bedrock, Azure AI, LangChain, and CrewAI. If you're running a custom agent framework, the Nullify API is framework-agnostic — any decision can be routed through a single REST endpoint. We've yet to encounter an architecture it doesn't fit.</p>
+        </div>
+      </div>
+
+      <div class="faq-item">
+        <button class="faq-q" onclick="toggleFaq(this)">
+          How does pricing work if our decision volume grows?
+          <span class="faq-arrow">+</span>
+        </button>
+        <div class="faq-a">
+          <p>Annual contracts include a fixed decision volume that covers most enterprise deployments. If you're scaling rapidly or have highly variable volume, we offer usage-based pricing at $0.01–$0.10 per decision (tiered by volume). We build custom pricing structures for deployments above 1M decisions/month — those conversations happen at the Enterprise tier.</p>
+        </div>
+      </div>
+
+      <div class="faq-item">
+        <button class="faq-q" onclick="toggleFaq(this)">
+          Is this actually ready for the EU AI Act deadline?
+          <span class="faq-arrow">+</span>
+        </button>
+        <div class="faq-a">
+          <p>Yes. Nullify's real-time interception, full audit logging, and explainable verdict output are designed specifically to satisfy the EU AI Act's requirements for high-risk AI systems. We have legal and compliance advisors on staff who stay current with the evolving regulatory landscape, and we provide audit-ready documentation in the format regulators actually request. Several of our current customers are using Nullify as their EU AI Act compliance infrastructure.</p>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</section>
+
+
+<!-- ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+     SECTION 10 — FINAL CTA
+     Wireframe: Full-width purple-tinted panel. Large centered
+     headline. CTA button. Trust signals row below.
+     Risk reversal: "No long-term commitment until you've seen it work."
+     ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ -->
+<section class="section final-cta" id="cta">
+  <div class="container">
+    <div class="eyebrow" style="justify-content: center;">Get Started</div>
+
+    <!-- [TEST]: "Get Protected Today" vs "See Nullify In Your Environment" -->
+    <h2>
+      Your AI Agents Are Running Right Now.<br/>
+      <span class="text-accent">Is Anyone Watching?</span>
+    </h2>
+
+    <p>
+      Book a 45-minute demo. We'll walk through your current agent setup, identify your highest-risk decision points, and show you exactly what Nullify would catch. No commitment required until you've seen it work.
+    </p>
+
+    <div style="display: flex; gap: 16px; justify-content: center; flex-wrap: wrap;">
+      <a href="#" class="btn btn-primary btn-lg">Book a 45-Min Demo →</a>
+      <a href="#" class="btn btn-outline btn-lg">Download the Whitepaper</a>
+    </div>
+
+    <div class="cta-trust">
+      <div class="trust-item"><span class="icon">🔒</span> SOC 2 Type II Compliant</div>
+      <div class="trust-item"><span class="icon">🏥</span> HIPAA Ready</div>
+      <div class="trust-item"><span class="icon">🇪🇺</span> EU AI Act Aligned</div>
+      <div class="trust-item"><span class="icon">⚡</span> 4-Day Average Deployment</div>
+      <div class="trust-item"><span class="icon">🛡️</span> 99.9% Uptime SLA</div>
+    </div>
+  </div>
+</section>
+
+
+<!-- ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+     FOOTER
+     Wireframe: 4 columns (brand + 3 link groups). Bottom bar:
+     copyright left, social icons right.
+     ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ -->
+<footer>
+  <div class="container">
+    <div class="footer-grid">
+
+      <div class="footer-brand">
+        <div class="nav-logo">
+          <span class="logo-dot"></span>
+          Nullify AI
+        </div>
+        <p>Real-time decision enforcement for AI agents in regulated industries. Stop bad decisions before they execute — in milliseconds, at any scale.</p>
+        <div style="margin-top: 20px; display: flex; gap: 12px; flex-wrap: wrap;">
+          <span class="badge badge-teal">SOC 2 Type II</span>
+          <span class="badge badge-purple">HIPAA Ready</span>
+          <span class="badge badge-purple">EU AI Act Aligned</span>
+        </div>
+      </div>
+
+      <div class="footer-col">
+        <h4>Product</h4>
+        <ul>
+          <li><a href="#">How It Works</a></li>
+          <li><a href="#">Features</a></li>
+          <li><a href="#">Integrations</a></li>
+          <li><a href="#">Pricing</a></li>
+          <li><a href="#">Security</a></li>
+          <li><a href="#">API Docs</a></li>
+        </ul>
+      </div>
+
+      <div class="footer-col">
+        <h4>Industries</h4>
+        <ul>
+          <li><a href="#">Insurance &amp; Claims</a></li>
+          <li><a href="#">Lending &amp; Fintech</a></li>
+          <li><a href="#">Healthcare</a></li>
+          <li><a href="#">EU AI Act Compliance</a></li>
+          <li><a href="#">Case Studies</a></li>
+        </ul>
+      </div>
+
+      <div class="footer-col">
+        <h4>Company</h4>
+        <ul>
+          <li><a href="#">About</a></li>
+          <li><a href="#">Blog</a></li>
+          <li><a href="#">Careers</a></li>
+          <li><a href="#">Press</a></li>
+          <li><a href="#">Contact</a></li>
+          <li><a href="#">Privacy Policy</a></li>
+          <li><a href="#">Terms of Service</a></li>
+        </ul>
+      </div>
+
+    </div>
+
+    <div class="footer-bottom">
+      <span>© 2026 Nullify AI, Inc. All rights reserved.</span>
+      <div class="footer-socials">
+        <!-- Developer: replace text with SVG icons (LinkedIn, Twitter/X, GitHub) -->
+        <a href="#" title="LinkedIn">in</a>
+        <a href="#" title="X / Twitter">𝕏</a>
+        <a href="#" title="GitHub">⌥</a>
+      </div>
+    </div>
+  </div>
+</footer>
+
+
+<!-- ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+     JAVASCRIPT
+     Developer: Replace with full framework implementation (React,
+     Vue, etc.) as needed. This is vanilla JS for the static mockup.
+     ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ -->
+<script>
+  /* ── FAQ accordion ───────────────────────────────────────── */
+  function toggleFaq(btn) {
+    const item = btn.closest('.faq-item');
+    const isOpen = item.classList.contains('open');
+    // Close all
+    document.querySelectorAll('.faq-item').forEach(el => el.classList.remove('open'));
+    // Toggle clicked
+    if (!isOpen) item.classList.add('open');
+  }
+
+  /* ── Decision stream animation ───────────────────────────── */
+  // Developer: Enhance with real-time WebSocket data in production.
+  // This stub cycles through mock decisions every 2.5s to demo the live feed.
+  const mockDecisions = [
+    { type: 'approved', icon: '📋', desc: '<strong>Loan Application #8824</strong> — LTV 72%, prime borrower, within parameters', latency: '4ms', status: 'Approved' },
+    { type: 'blocked',  icon: '🚨', desc: '<strong>Claim #CLM-4491</strong> — Duplicate submission, Rule: CLM-DUP-01', latency: '3ms', status: 'Blocked' },
+    { type: 'approved', icon: '📋', desc: '<strong>Prior Auth #PA-1124</strong> — Diagnosis code valid, formulary match confirmed', latency: '5ms', status: 'Approved' },
+    { type: 'reviewing',icon: '🔍', desc: '<strong>Claim #CLM-4492</strong> — Third-party liability indicator, escalating for review', latency: '7ms', status: 'Reviewing' },
+    { type: 'blocked',  icon: '🚨', desc: '<strong>Loan Application #8825</strong> — DTI exceeds 43% threshold, Rule: LOAN-DTI-02', latency: '4ms', status: 'Blocked' },
+    { type: 'approved', icon: '📋', desc: '<strong>Prior Auth #PA-1125</strong> — Procedure in-network, within benefit limits', latency: '3ms', status: 'Approved' },
+  ];
+  let decisionIdx = 0;
+
+  function addDecisionRow() {
+    const rows = document.querySelector('.decision-rows');
+    if (!rows) return;
+    const d = mockDecisions[decisionIdx % mockDecisions.length];
+    decisionIdx++;
+
+    // Remove oldest row if > 5
+    while (rows.children.length >= 5) rows.removeChild(rows.firstChild);
+
+    const row = document.createElement('div');
+    row.className = `decision-row dr-${d.type}`;
+    row.innerHTML = `
+      <div class="dr-icon">${d.icon}</div>
+      <div class="dr-desc">${d.desc}</div>
+      <div class="dr-latency">${d.latency}</div>
+      <div class="dr-status">${d.status}</div>
+    `;
+    rows.appendChild(row);
+
+    // Update counter
+    const counter = document.querySelector('.ds-stat:last-child .val');
+    if (counter) counter.textContent = (parseInt(counter.textContent.replace(/,/g,'')) + 1).toLocaleString();
+  }
+
+  setInterval(addDecisionRow, 2500);
+</script>
+
+</body>
+</html>
