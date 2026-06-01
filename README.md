@@ -6,7 +6,6 @@
 
 ![Status](https://img.shields.io/badge/status-prototype-blueviolet)
 ![Stack](https://img.shields.io/badge/stack-HTML%20%2F%20CSS%20%2F%20JS-blue)
-![License](https://img.shields.io/badge/license-MIT-green)
 ![EU AI Act](https://img.shields.io/badge/EU%20AI%20Act-August%202026-orange)
 
 ---
