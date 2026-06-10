@@ -1,0 +1,678 @@
+# NullifyAI — System Architecture
+
+> **Prototype Edition · June 2026**
+> Pre-action enforcement middleware for regulated AI agents.
+
+---
+
+## Table of Contents
+
+1. [System Overview](#1-system-overview)
+2. [End-to-End User Flow](#2-end-to-end-user-flow)
+   - 2.1 [Happy Path — Decision Approved](#21-happy-path--decision-approved)
+   - 2.2 [Enforcement Path — Decision Blocked](#22-enforcement-path--decision-blocked)
+   - 2.3 [Escalation Path — Human Review Required](#23-escalation-path--human-review-required)
+   - 2.4 [Drift Detection Flow](#24-drift-detection-flow)
+   - 2.5 [Onboarding Flow — Operator Sets Up an Agent](#25-onboarding-flow--operator-sets-up-an-agent)
+   - 2.6 [Compliance Audit Export Flow](#26-compliance-audit-export-flow)
+3. [Systems Connection Map](#3-systems-connection-map)
+   - 3.1 [High-Level Component Topology](#31-high-level-component-topology)
+   - 3.2 [Enforcement Pipeline — Internal Layers](#32-enforcement-pipeline--internal-layers)
+   - 3.3 [Data Stores](#33-data-stores)
+   - 3.4 [External Integrations](#34-external-integrations)
+   - 3.5 [Multi-Region Deployment](#35-multi-region-deployment)
+4. [API Surface](#4-api-surface)
+5. [Security & Compliance Boundaries](#5-security--compliance-boundaries)
+6. [Latency Budget](#6-latency-budget)
+
+---
+
+## 1. System Overview
+
+NullifyAI sits **between** an AI agent and any downstream system the agent would otherwise call directly. Every decision the agent attempts to execute is routed through the NullifyAI enforcement layer before it reaches the outside world.
+
+```
+  Without NullifyAI:
+  ┌───────────┐        ┌──────────────────────┐
+  │ AI Agent  │───────▶│ Downstream System     │
+  └───────────┘        │ (EHR / LOS / Fraud DB)│
+                       └──────────────────────┘
+
+  With NullifyAI:
+  ┌───────────┐   action()  ┌─────────────────┐  verdict  ┌──────────────────────┐
+  │ AI Agent  │────────────▶│  NullifyAI SDK  │──────────▶│ Agent continues OR   │
+  └───────────┘             │  (wrap, 1ms)    │           │ is blocked/escalated │
+                            └────────┬────────┘           └──────────────────────┘
+                                     │ POST /v1/evaluate
+                                     ▼
+                            ┌─────────────────────────────┐
+                            │  Enforcement API (P95 <10ms) │
+                            └─────────────────────────────┘
+```
+
+**Core guarantee:** every decision receives a verdict — `APPROVED`, `BLOCKED`, or `ESCALATED` — in under 10ms at the 95th percentile, with zero changes to the agent's source code.
+
+---
+
+## 2. End-to-End User Flow
+
+### 2.1 Happy Path — Decision Approved
+
+An agent makes a compliant decision. NullifyAI evaluates it, finds no violations, returns `APPROVED`, and the agent proceeds normally.
+
+```
+Agent Code                SDK                  Enforcement API              Downstream System
+─────────────────────────────────────────────────────────────────────────────────────────────
+agent.action(payload)
+    │
+    ▼
+nullify.wrap(agent)
+    │
+    │  [+1ms] Intercept Layer
+    │  Serialize payload + agent metadata
+    │  POST /v1/evaluate ──────────────────▶
+    │                                        [+4ms] Policy Engine
+    │                                        Evaluate 50+ rules in parallel
+    │                                        All rules PASS
+    │                                        │
+    │                                        [+3ms] Drift Detector
+    │                                        Score current decision vs 7-day baseline
+    │                                        Drift score: 18  (Healthy, 0–30)
+    │                                        │
+    │                                        [+2ms] Verdict Engine
+    │                                        Compose verdict: APPROVED
+    │                                        Sign record: HMAC-SHA256
+    │                                        │
+    │◀───────────────────────────────────── 200 OK { verdict: "APPROVED", latency: 9ms }
+    │                                        │
+    │                                        [async] Audit Logger
+    │                                        Write signed record → S3 + DynamoDB
+    │
+    ▼
+agent proceeds → calls downstream system ──────────────────────────────────▶ EHR / LOS / DB
+```
+
+**Total added latency:** ~9ms (P95 ≤10ms)
+**Agent behavior:** unchanged — proceeds exactly as if NullifyAI were not present.
+
+---
+
+### 2.2 Enforcement Path — Decision Blocked
+
+An agent attempts a decision that violates one or more active policies. NullifyAI returns `BLOCKED` and the agent is prevented from calling any downstream system.
+
+```
+Agent Code               SDK                   Enforcement API              Slack / PagerDuty
+──────────────────────────────────────────────────────────────────────────────────────────────
+agent.action(payload)
+    │                                           [+4ms] Policy Engine
+    │                                           Rule HC-001: formulary_success_rate < 0.95
+    │                                           ──── VIOLATION ────
+    │                                           Rule stopped; remaining rules skipped
+    │                                           │
+    │                                           [+3ms] Drift Detector
+    │                                           Drift score: 87  (Severe, >80)
+    │                                           │
+    │                                           [+2ms] Verdict Engine
+    │                                           verdict: BLOCKED
+    │                                           reason: "HC-001 formulary_rate=0.78 < 0.95"
+    │                                           exposure_estimate: $31,000
+    │                                           │
+    │◀─────────────────────────────────────── 200 OK { verdict: "BLOCKED", rule: "HC-001" }
+    │                                           │
+    ▼                                           [async] Alert Dispatcher
+nullify.wrap() throws                           │── POST Slack #compliance-alerts
+  NullifyBlockedError                           │── PagerDuty L2 incident (drift >80)
+    │                                           │── Write audit record (signed)
+    ▼
+Agent catches error
+Agent does NOT call downstream system
+Agent may: notify user, log, retry with
+  different parameters, or halt
+```
+
+**Key property:** the downstream system (EHR, LOS, Fraud DB) is never called. The damage is prevented, not just logged.
+
+---
+
+### 2.3 Escalation Path — Human Review Required
+
+A decision cannot be auto-approved or auto-blocked — it requires a human analyst to review before execution proceeds.
+
+```
+Agent Code               SDK                   Enforcement API              Analyst Dashboard
+──────────────────────────────────────────────────────────────────────────────────────────────
+agent.action(payload)
+    │                                           Policy Engine:
+    │                                           Rule F-09: high_value_claim > $50,000
+    │                                           Threshold: escalate, do not block
+    │                                           │
+    │                                           Verdict Engine:
+    │                                           verdict: ESCALATED
+    │                                           escalation_queue: "claims-review"
+    │                                           sla_minutes: 30
+    │
+    │◀─────────────────────────────────────── 200 OK { verdict: "ESCALATED" }
+    │
+    ▼
+Agent suspends execution
+Places decision in pending queue
+Returns "pending review" to end user
+    │
+    │                                           [async]
+    │                                           ──── Analyst notified (Slack + email)
+    │                                           ──── Decision visible in Review Queue UI
+    │
+    │                               ◀──── Analyst opens Dashboard
+    │                               ◀──── Reviews decision details + audit context
+    │                               ◀──── Clicks APPROVE or REJECT
+    │
+    │◀─────────────────────────────────────── Webhook: { decision_id, outcome: "approved" }
+    │
+    ▼
+Agent resumes
+If approved → calls downstream system
+If rejected → halts, logs, notifies end user
+```
+
+---
+
+### 2.4 Drift Detection Flow
+
+Drift detection runs **in parallel** with policy evaluation on every decision. It compares the current decision's behavioral signature against the agent's 7-day rolling baseline.
+
+```
+Every Decision (continuous)
+───────────────────────────────────────────────────────────────────────────────────────────
+incoming decision payload
+    │
+    ▼
+Baseline ML Scorer                             CUSUM Engine
+┌──────────────────────────────────────────────────────────────┐
+│                                                              │
+│  Extract features:                                           │
+│    - decision_type distribution                              │
+│    - confidence scores (mean, std)                           │
+│    - violation rate (rolling 1h)                             │
+│    - block rate (rolling 1h)                                 │
+│    - output token length (for LLM agents)                    │
+│                                                              │
+│  Compare to 7-day baseline (EWMA-smoothed per agent)         │
+│                                                              │
+│  Drift Score =                                               │
+│    distribution_shift  × 0.40                                │
+│    + violation_rate_Δ  × 0.35                                │
+│    + block_rate_delta  × 0.25                                │
+│                                                              │
+│  Score: 0–100                                                │
+└──────────────────────────────────────────────────────────────┘
+    │
+    ▼
+Score Threshold Router
+┌─────────────┬──────────────────────────────────────────────┐
+│ 0–30        │ Healthy — no action                          │
+│ 31–60       │ Warning — Slack alert → #compliance-alerts   │
+│ 61–80       │ Critical — PagerDuty L2 incident fired       │
+│ 81–100      │ Severe — agent BLOCKED; L2 incident + Slack  │
+└─────────────┴──────────────────────────────────────────────┘
+    │
+    ▼
+Audit record updated with drift_score field
+Dashboard agent card updates color in real-time (WebSocket push)
+```
+
+---
+
+### 2.5 Onboarding Flow — Operator Sets Up an Agent
+
+How a new enterprise customer goes from zero to first intercepted decision.
+
+```
+Operator                  NullifyAI Portal         SDK / CI               Production
+────────────────────────────────────────────────────────────────────────────────────
+1. Sign up / log in
+   │
+   ▼
+2. Create Agent Profile
+   Agent name, vertical, baseline period (default: 7 days)
+   └──▶ API returns: agent_id, api_key
+   │
+   ▼
+3. Select Policy Template
+   Choose vertical: Healthcare / Lending / Fraud
+   Enable shadow mode (optional — evaluate but don't block)
+   └──▶ Policy set saved; rules activated
+   │
+   ▼
+4. Install SDK
+   pip install nullify-sdk   or   npm install @nullify/sdk
+   │
+   ▼
+5. Wrap Agent (1 line of code)
+   ┌────────────────────────────────────────────────────────┐
+   │  from nullify import wrap                              │
+   │  agent = wrap(my_agent, api_key="...", agent_id="...") │
+   └────────────────────────────────────────────────────────┘
+   │
+   ▼
+6. Deploy to staging → run smoke tests
+   SDK fires test decision → enforcement API responds
+   Dashboard shows first intercepted decision ✓
+   │
+   ▼
+7. Disable shadow mode → enforcement goes live
+   First BLOCKED or APPROVED verdict in production
+   Baseline period begins (7 days before drift scoring activates)
+   │
+   ▼
+Target: contract signed → first live interception < 4 hours
+```
+
+---
+
+### 2.6 Compliance Audit Export Flow
+
+Used when an operator needs to produce a tamper-proof audit report for a regulator (e.g., EU AI Act Article 13 audit).
+
+```
+Operator / Auditor                 NullifyAI Portal           Storage Layer
+──────────────────────────────────────────────────────────────────────────────
+1. Navigate to Audit Export tab
+   Select: agent(s), date range, verdict filter
+   │
+   ▼
+2. POST /v1/audit/export
+   { agent_id, from, to, format: "pdf" | "csv" }
+   │
+   └──▶ Audit Service queries DynamoDB (index: agent_id + timestamp)
+        Fetches all matching records from S3 (append-only Object Lock)
+        Re-validates HMAC-SHA256 signature on each record
+        If any signature fails → record flagged as TAMPERED in report
+        │
+        ▼
+3. Generate report artifact
+   Includes: decision_id, agent_id, timestamp, payload hash,
+             verdict, rule_id, drift_score, HMAC signature
+   Signed PDF / CSV produced
+   │
+   ▼
+4. Operator downloads → provides to auditor
+   Auditor can independently verify signatures using public key
+   Retention: 7 years (S3 Object Lock — cannot be deleted)
+```
+
+---
+
+## 3. Systems Connection Map
+
+### 3.1 High-Level Component Topology
+
+```
+┌─────────────────────────────────────────────────────────────────────────────────────┐
+│                              CUSTOMER ENVIRONMENT                                    │
+│                                                                                     │
+│   ┌────────────┐    ┌──────────────────────────────────────────────────────────┐   │
+│   │ AI Agent   │    │                   NullifyAI SDK                          │   │
+│   │            │    │   (Python / TypeScript / REST)                           │   │
+│   │  action()  │───▶│   Wraps agent.action() with nullify.wrap()               │   │
+│   │            │    │   Local rule cache (failsafe)                            │   │
+│   └────────────┘    │   Circuit breaker (fail-open or fail-closed per config)  │   │
+│                     └───────────────────┬────────────────────────────────────┘   │
+│                                         │ HTTPS POST /v1/evaluate                 │
+└─────────────────────────────────────────┼───────────────────────────────────────┘
+                                          │
+                                          ▼
+┌─────────────────────────────────────────────────────────────────────────────────────┐
+│                             NULLIFYAI CLOUD (AWS)                                   │
+│                                                                                     │
+│   ┌─────────────────────────────────────────────────────────────────────────────┐  │
+│   │                        Enforcement API  (ECS Fargate)                       │  │
+│   │                                                                             │  │
+│   │   ┌───────────────┐   ┌─────────────────┐   ┌──────────────┐              │  │
+│   │   │  1. Intercept │──▶│  2. Policy Eng. │──▶│  3. Drift    │              │  │
+│   │   │     Layer     │   │  (rule eval)    │   │  Detector    │              │  │
+│   │   │     +1ms      │   │  50+ rules      │   │  CUSUM/ML    │              │  │
+│   │   │               │   │  parallel eval  │   │  +3ms        │              │  │
+│   │   └───────────────┘   │  +4ms           │   └──────┬───────┘              │  │
+│   │                       └─────────────────┘          │                      │  │
+│   │                                                     ▼                      │  │
+│   │                                           ┌──────────────────┐             │  │
+│   │                                           │  4. Verdict Eng. │             │  │
+│   │                                           │  APPROVED /      │             │  │
+│   │                                           │  BLOCKED /       │             │  │
+│   │                                           │  ESCALATED       │             │  │
+│   │                                           │  +2ms            │             │  │
+│   │                                           └────────┬─────────┘             │  │
+│   └────────────────────────────────────────────────────┼─────────────────────┘  │
+│                                                         │                         │
+│            ┌────────────────────────────────────────────┤                         │
+│            │                                            │                         │
+│            ▼  (async)                                   ▼  (sync, in response)    │
+│   ┌─────────────────┐                        Verdict returned to SDK              │
+│   │  5. Audit Logger│                                                             │
+│   │  HMAC-SHA256    │                                                             │
+│   │  sign + write   │                                                             │
+│   └──────┬──────────┘                                                             │
+│          │                                                                         │
+│   ┌──────▼──────────────────────────────────────────────────────────────────────┐ │
+│   │                          Data + Storage Layer                               │ │
+│   │                                                                             │ │
+│   │  ┌─────────────────────┐  ┌──────────────────────┐  ┌──────────────────┐  │ │
+│   │  │  S3 Object Lock     │  │  DynamoDB            │  │  ElastiCache     │  │ │
+│   │  │  Audit records      │  │  Rule configs        │  │  Redis           │  │ │
+│   │  │  7-year retention   │  │  Agent profiles      │  │  Baseline cache  │  │ │
+│   │  │  Append-only        │  │  Audit index         │  │  Rule cache      │  │ │
+│   │  └─────────────────────┘  └──────────────────────┘  └──────────────────┘  │ │
+│   └─────────────────────────────────────────────────────────────────────────────┘ │
+│                                                                                     │
+│   ┌─────────────────────────────────────────────────────────────────────────────┐  │
+│   │                      Alert & Notification Layer                             │  │
+│   │   ┌────────────┐  ┌──────────────┐  ┌──────────────┐  ┌────────────────┐  │  │
+│   │   │  Slack     │  │  PagerDuty   │  │  Email       │  │  Webhook       │  │  │
+│   │   │  #alerts   │  │  L2 incident │  │  digest      │  │  custom URL    │  │  │
+│   │   └────────────┘  └──────────────┘  └──────────────┘  └────────────────┘  │  │
+│   └─────────────────────────────────────────────────────────────────────────────┘  │
+│                                                                                     │
+│   ┌─────────────────────────────────────────────────────────────────────────────┐  │
+│   │                    Operator Dashboard  (React SPA)                          │  │
+│   │   Agent monitor · Rule builder · Audit export · Alert config · Analytics   │  │
+│   └─────────────────────────────────────────────────────────────────────────────┘  │
+└─────────────────────────────────────────────────────────────────────────────────────┘
+```
+
+---
+
+### 3.2 Enforcement Pipeline — Internal Layers
+
+Each incoming decision passes through four layers in series. Every layer has an independent timeout; a layer timeout triggers the circuit breaker (fail-open or fail-closed, per agent config).
+
+| Layer | Component | Responsibility | P95 Budget | Timeout |
+|---|---|---|---|---|
+| 1 | **Intercept Layer** | Deserialize payload; attach agent metadata; validate API key | 1ms | 5ms |
+| 2 | **Policy Engine** | Evaluate all active rules in parallel; return first violation or all-clear | 4ms | 8ms |
+| 3 | **Drift Detector** | CUSUM score vs 7-day EWMA baseline; classify threshold tier | 3ms | 6ms |
+| 4 | **Verdict Engine** | Compose final verdict; sign with HMAC-SHA256; build audit record | 2ms | 4ms |
+| 5 | **Audit Logger** | Async write to S3 + DynamoDB; trigger alert dispatcher if needed | async | 50ms |
+
+**Circuit breaker behavior:**
+- If Enforcement API is unreachable: SDK uses local rule cache (subset of high-priority rules).
+- If local cache also unavailable: agent proceeds based on per-agent `on_failure` config — either `fail_open` (APPROVED) or `fail_closed` (BLOCKED).
+- Every circuit-breaker event is logged and triggers a Slack/PagerDuty alert.
+
+---
+
+### 3.3 Data Stores
+
+```
+┌─────────────────────────────────────────────────────────────────────────────────┐
+│  S3 Object Lock  (us-east-1 + eu-west-1 replica)                               │
+│  ─────────────────────────────────────────────────────────────────────────────  │
+│  Path: s3://nullify-audit/{tenant_id}/{agent_id}/{YYYY}/{MM}/{DD}/{uuid}.json  │
+│  Content: signed audit record (see schema below)                                │
+│  Retention: 7 years (COMPLIANCE mode — cannot be deleted or overwritten)        │
+│  Encryption: SSE-KMS (per-tenant key)                                           │
+│  Daily integrity job: re-validates HMAC on all records from prior 24h           │
+└─────────────────────────────────────────────────────────────────────────────────┘
+
+┌─────────────────────────────────────────────────────────────────────────────────┐
+│  DynamoDB                                                                       │
+│  ─────────────────────────────────────────────────────────────────────────────  │
+│  Table: nullify_agents      — agent profiles, api_keys, on_failure config       │
+│  Table: nullify_rules       — rule definitions (YAML DSL parsed + compiled)     │
+│  Table: nullify_policies    — policy sets per tenant per vertical                │
+│  Table: nullify_baselines   — 7-day EWMA baseline stats per agent               │
+│  Table: nullify_audit_index — PK: agent_id, SK: timestamp (fast audit queries) │
+│  Table: nullify_escalations — pending escalation queue, SLA timer, outcome      │
+└─────────────────────────────────────────────────────────────────────────────────┘
+
+┌─────────────────────────────────────────────────────────────────────────────────┐
+│  ElastiCache (Redis)                                                            │
+│  ─────────────────────────────────────────────────────────────────────────────  │
+│  Key: rule_cache:{tenant_id}:{policy_id}   TTL: 30s                            │
+│  Key: baseline:{agent_id}:stats            TTL: 60s                            │
+│  Key: drift_score:{agent_id}               TTL: 10s (real-time dashboard feed) │
+│  Key: rate_limit:{api_key}                 TTL: 1s (sliding window counter)    │
+└─────────────────────────────────────────────────────────────────────────────────┘
+```
+
+**Audit record schema (stored in S3):**
+
+```json
+{
+  "record_id":      "uuid-v4",
+  "tenant_id":      "acme-health",
+  "agent_id":       "PriorAuth-HC",
+  "timestamp":      "2026-06-10T14:22:01.443Z",
+  "payload_hash":   "sha256:...",
+  "verdict":        "BLOCKED",
+  "rule_id":        "HC-001",
+  "rule_version":   "1.4",
+  "violation":      "formulary_success_rate=0.78 < threshold=0.95",
+  "drift_score":    87,
+  "drift_tier":     "SEVERE",
+  "latency_ms":     9,
+  "shadow_mode":    false,
+  "hmac_sha256":    "...",
+  "hmac_key_id":    "key-2026-Q2"
+}
+```
+
+---
+
+### 3.4 External Integrations
+
+```
+┌──────────────────────────────────────────────────────────────────────────────────┐
+│  Agent Framework Integrations (SDK wrappers)                                    │
+│                                                                                  │
+│  ┌─────────────────┐  ┌─────────────────┐  ┌─────────────────┐                │
+│  │   LangChain     │  │    CrewAI       │  │    AutoGen      │                │
+│  │   BaseAgent     │  │    Agent        │  │    Agent        │                │
+│  │   wrapper       │  │    wrapper      │  │    wrapper      │                │
+│  └────────┬────────┘  └────────┬────────┘  └────────┬────────┘                │
+│           └────────────────────┼────────────────────┘                          │
+│                                ▼                                                │
+│               NullifyAI SDK  nullify.wrap(agent, config)                       │
+│                                                                                  │
+│  Also supported: OpenAI Assistants API · Anthropic Agents · Custom REST POST   │
+└──────────────────────────────────────────────────────────────────────────────────┘
+
+┌──────────────────────────────────────────────────────────────────────────────────┐
+│  Alerting & Incident Management                                                 │
+│                                                                                  │
+│  Trigger           → Destination          Condition                             │
+│  ──────────────────────────────────────────────────────────────────             │
+│  BLOCKED verdict   → Slack webhook        POST to #compliance-alerts            │
+│  Drift ≥ Warning   → Slack webhook        POST to #compliance-alerts            │
+│  Drift ≥ Critical  → PagerDuty Events API Create L2 incident                   │
+│  Drift ≥ Severe    → PagerDuty Events API Create L2 incident + Slack           │
+│  ESCALATED verdict → Email + Slack        Notify assigned analyst queue         │
+│  Circuit breaker   → PagerDuty            Create L1 infrastructure incident     │
+└──────────────────────────────────────────────────────────────────────────────────┘
+
+┌──────────────────────────────────────────────────────────────────────────────────┐
+│  Observability & SIEM                                                           │
+│                                                                                  │
+│  Datadog APM      — API latency percentiles (P50 / P95 / P99 per endpoint)     │
+│  Datadog Metrics  — Decision throughput, verdict distribution, drift scores     │
+│  Splunk HEC       — Structured audit log stream (JSON, real-time)               │
+│  AWS CloudWatch   — Infrastructure metrics, ECS task health, Lambda errors      │
+│  Uptime Robot     — External availability probe (99.9% SLA monitoring)          │
+└──────────────────────────────────────────────────────────────────────────────────┘
+
+┌──────────────────────────────────────────────────────────────────────────────────┐
+│  Compliance & Security                                                          │
+│                                                                                  │
+│  AWS KMS          — Per-tenant encryption keys for S3 audit records             │
+│  AWS IAM          — Service roles; least-privilege per ECS task                 │
+│  AWS Secrets Mgr  — API keys, HMAC signing keys, third-party credentials        │
+│  SOC 2 Type I     — Audit in progress (Month 6 milestone)                      │
+│  HIPAA BAA        — Available for healthcare tenants                            │
+│  EU AI Act        — eu-west-1 data residency; Article 13 audit trail ready     │
+└──────────────────────────────────────────────────────────────────────────────────┘
+```
+
+---
+
+### 3.5 Multi-Region Deployment
+
+```
+                          ┌──────────────────────────────┐
+                          │   AWS Route 53               │
+                          │   Latency-based routing       │
+                          │   api.nullify.ai              │
+                          └───────┬──────────┬───────┬───┘
+                                  │          │       │
+                  ┌───────────────┘          │       └──────────────────┐
+                  ▼                          ▼                          ▼
+       ┌──────────────────┐     ┌──────────────────┐     ┌──────────────────────┐
+       │   us-east-1      │     │   eu-west-1      │     │   ap-southeast-1     │
+       │   Primary        │     │   EU Data        │     │   APAC               │
+       │                  │     │   Residency      │     │                      │
+       │  ECS Fargate     │     │  ECS Fargate     │     │  ECS Fargate         │
+       │  Enforcement API │     │  Enforcement API │     │  Enforcement API     │
+       │  DynamoDB Global │◀───▶│  DynamoDB Global │◀───▶│  DynamoDB Global     │
+       │  S3 (primary)    │     │  S3 (replica)    │     │  S3 (replica)        │
+       │  ElastiCache     │     │  ElastiCache     │     │  ElastiCache         │
+       └──────────────────┘     └──────────────────┘     └──────────────────────┘
+
+Each region:
+  - Independent ECS auto-scaling group (target: 70% CPU utilization)
+  - Regional ElastiCache cluster (no cross-region cache dependency)
+  - DynamoDB Global Tables for rule config + agent profiles (multi-master)
+  - S3 Cross-Region Replication for audit log (eu-west-1 is primary for EU tenants)
+  - Failover: Route 53 health checks auto-route around an unhealthy region
+```
+
+---
+
+## 4. API Surface
+
+| Endpoint | Method | Purpose | Auth | SLA |
+|---|---|---|---|---|
+| `/v1/evaluate` | POST | Submit a decision for enforcement verdict | API key | P95 <10ms |
+| `/v1/agents` | GET / POST | List or register agents | JWT | <100ms |
+| `/v1/agents/{id}/rules` | GET / PUT | Get or update active policy for an agent | JWT | <100ms |
+| `/v1/agents/{id}/baseline` | GET | Retrieve current 7-day baseline stats | JWT | <200ms |
+| `/v1/audit` | GET | Query audit log (paginated, filterable) | JWT | <500ms |
+| `/v1/audit/export` | POST | Generate CSV or PDF audit export | JWT | <30s |
+| `/v1/escalations` | GET / POST | List open escalations or submit an outcome | JWT | <200ms |
+| `/v1/rules` | GET / POST | Browse rule library or create custom rule | JWT | <200ms |
+| `/v1/rules/{id}/deploy` | POST | Activate a rule into a live policy set | JWT | <5s |
+| `/v1/webhooks` | GET / POST | Configure alert webhook destinations | JWT | <200ms |
+
+**Request schema for `/v1/evaluate`:**
+
+```json
+{
+  "agent_id":     "PriorAuth-HC",
+  "decision_type": "prior_auth_approval",
+  "payload": {
+    "patient_id":            "P-8821",
+    "treatment_code":        "CPT-99213",
+    "formulary_success_rate": 0.78,
+    "confidence_score":       0.91
+  },
+  "context": {
+    "session_id":  "sess-abc123",
+    "request_id":  "req-xyz789",
+    "timestamp":   "2026-06-10T14:22:01Z"
+  }
+}
+```
+
+**Response schema:**
+
+```json
+{
+  "verdict":      "BLOCKED",
+  "record_id":    "uuid-v4",
+  "rule_id":      "HC-001",
+  "rule_version": "1.4",
+  "violation":    "formulary_success_rate=0.78 < threshold=0.95",
+  "drift_score":  87,
+  "drift_tier":   "SEVERE",
+  "latency_ms":   9,
+  "timestamp":    "2026-06-10T14:22:01.452Z"
+}
+```
+
+---
+
+## 5. Security & Compliance Boundaries
+
+```
+┌──────────────────────────────────────────────────────────────────────────────────┐
+│  Trust Boundary 1 — Customer ↔ NullifyAI Cloud                                 │
+│                                                                                  │
+│  All traffic over TLS 1.3                                                       │
+│  API key authentication on /v1/evaluate (scoped per agent)                     │
+│  JWT (RS256) for all management plane endpoints                                  │
+│  Rate limiting: 10,000 req/s per tenant (sliding window, Redis-backed)          │
+└──────────────────────────────────────────────────────────────────────────────────┘
+
+┌──────────────────────────────────────────────────────────────────────────────────┐
+│  Trust Boundary 2 — NullifyAI Services (internal)                              │
+│                                                                                  │
+│  ECS tasks run with least-privilege IAM roles (no wildcard S3/DDB permissions) │
+│  Secrets Manager for all credentials (no env var injection)                     │
+│  VPC with private subnets; no public IPs on ECS tasks                          │
+│  NLB terminates TLS; ECS tasks communicate over private VPC only               │
+└──────────────────────────────────────────────────────────────────────────────────┘
+
+┌──────────────────────────────────────────────────────────────────────────────────┐
+│  Data Isolation                                                                 │
+│                                                                                  │
+│  Tenant data is logically isolated (tenant_id partition key on all tables)      │
+│  S3 Object Lock prevents audit record mutation or deletion for 7 years          │
+│  KMS key rotation: annual (per-tenant keys)                                     │
+│  HMAC signing key rotation: quarterly (key_id tracked per audit record)        │
+└──────────────────────────────────────────────────────────────────────────────────┘
+
+┌──────────────────────────────────────────────────────────────────────────────────┐
+│  Regulatory Coverage                                                            │
+│                                                                                  │
+│  EU AI Act (Aug 2026)  — Article 13 audit trail; eu-west-1 data residency      │
+│  HIPAA                 — BAA available; PHI never stored in payload             │
+│  SOC 2 Type I          — Audit in progress; Type II planned Year 1             │
+│  GDPR                  — eu-west-1 residency; right-to-erasure process TBD     │
+└──────────────────────────────────────────────────────────────────────────────────┘
+```
+
+---
+
+## 6. Latency Budget
+
+The P95 <10ms guarantee breaks down as follows across the four synchronous layers:
+
+```
+ ms  0        2        4        6        8       10
+     │        │        │        │        │        │
+     ├────────┤────────────────────────────────────
+     │  1ms   │  Intercept Layer (deserialize, auth)
+     │        ├──────────────────────────────────
+     │        │     4ms    │  Policy Engine (50+ rules, parallel)
+     │        │            ├─────────────────────
+     │        │            │   3ms   │  Drift Detector (CUSUM score)
+     │        │            │         ├────────────
+     │        │            │         │  2ms  │  Verdict Engine (compose + sign)
+     │        │            │         │       ├──
+     ├────────┴────────────┴─────────┴───────┤ ~10ms total (P95)
+                                              │
+                                   ~~~~~~~~~~~~~~~~~~~~~~~~~~~
+                                   5. Audit Logger (async, does not
+                                      block the synchronous response)
+                                      Target: <50ms write to S3 + DDB
+```
+
+| Percentile | Target | Breach Threshold | SLA |
+|---|---|---|---|
+| P50 | <4ms | — | — |
+| P95 | <10ms | >20ms alert | >30ms SLA breach |
+| P99 | <25ms | >50ms alert | >75ms SLA breach |
+
+Measured via Datadog APM on the `/v1/evaluate` endpoint at sustained 500 concurrent decisions/second load.
+
+---
+
+*Last updated: June 2026 · NullifyAI Prototype · For design partner and investor review*
